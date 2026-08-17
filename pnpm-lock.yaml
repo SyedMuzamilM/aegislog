@@ -29,6 +29,12 @@ importers:
 
   packages/core: {}
 
+  packages/dev:
+    dependencies:
+      aegislog:
+        specifier: workspace:*
+        version: link:../core
+
   packages/express:
     dependencies:
       aegislog:
