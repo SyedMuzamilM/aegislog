@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MemorySink } from "../src/sinks.js";
 import { createLogger } from "../src/logger.js";
 import { runWithContext, setActor, setTenant } from "../src/context.js";
+import { formatDevLog } from "../src/formatters/dev.js";
 
 describe("AegisLog Core Engine", () => {
   it("logs messages and attaches metadata", () => {
@@ -151,5 +152,39 @@ describe("AegisLog Core Engine", () => {
     expect(memory.entries[0]?.message).toBe("Step 1: Parse request");
     expect(memory.entries[1]?.message).toBe("Step 2: Connect DB");
     expect(memory.entries[2]?.message).toBe("Step 3: DB connection dropped!");
+  });
+
+  it("customizes console display with DevDisplayOptions (Helmet for console)", () => {
+    const entry = {
+      level: "info" as const,
+      message: "Processing order",
+      timestamp: "2026-08-17T12:00:00.000Z",
+      context: {
+        requestId: "req_xyz_123",
+        actor: { id: "usr_alice", email: "alice@test.com" },
+        tenant: { id: "tenant_99" },
+      },
+      meta: { orderId: "ord_999", secretDebugToken: "internal_123" },
+    };
+
+    // 1. Test minimal preset (no timestamp, no context)
+    const minimal = formatDevLog(entry, { preset: "minimal" });
+    expect(minimal).not.toContain("12:00:00");
+    expect(minimal).not.toContain("usr_alice");
+
+    // 2. Test filterMeta
+    const filtered = formatDevLog(entry, {
+      filterMeta: (key) => key !== "secretDebugToken",
+    });
+    expect(filtered).toContain("ord_999");
+    expect(filtered).not.toContain("internal_123");
+
+    // 3. Test custom badges and icons toggle
+    const customBadge = formatDevLog(entry, {
+      icons: false,
+      badges: { info: "[CUSTOM_INFO]" },
+    });
+    expect(customBadge).toContain("[CUSTOM_INFO]");
+    expect(customBadge).not.toContain("ℹ️");
   });
 });

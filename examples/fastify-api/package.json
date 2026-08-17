@@ -1,0 +1,17 @@
+{
+  "name": "example-fastify-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx index.ts"
+  },
+  "dependencies": {
+    "@aegislog/fastify": "workspace:*",
+    "aegislog": "workspace:*",
+    "fastify": "^5.2.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}

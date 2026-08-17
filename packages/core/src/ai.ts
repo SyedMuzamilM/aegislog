@@ -74,6 +74,46 @@ export class AiTracker {
     return Number((inputCost + outputCost).toFixed(6));
   }
 
+  public log(options: {
+    model: string;
+    provider?: string;
+    prompt?: string;
+    completion?: string;
+    usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number };
+    durationMs?: number;
+    meta?: Record<string, unknown>;
+  }): void {
+    const provider = options.provider ?? "ai";
+    const promptTokens = options.usage?.promptTokens ?? 0;
+    const completionTokens = options.usage?.completionTokens ?? 0;
+    const totalTokens = options.usage?.totalTokens ?? promptTokens + completionTokens;
+    const cost = this.calculateCost(options.model, promptTokens, completionTokens);
+    const duration = options.durationMs ?? 0;
+
+    const sanitizedPrompt = options.prompt ? this.shield.sanitizeString(options.prompt) : undefined;
+    const sanitizedCompletion = options.completion
+      ? this.shield.sanitizeString(options.completion)
+      : undefined;
+
+    this.logger.info(
+      `[AI:Call] ${provider}:${options.model} (${totalTokens} tokens, ~$${cost}, ${duration}ms)`,
+      {
+        provider,
+        model: options.model,
+        durationMs: duration,
+        prompt: sanitizedPrompt,
+        completion: sanitizedCompletion,
+        usage: {
+          promptTokens,
+          completionTokens,
+          totalTokens,
+          estimatedCostUsd: cost,
+        },
+        ...options.meta,
+      },
+    );
+  }
+
   public async track<T>(options: AiTrackOptions<T>): Promise<T> {
     const provider = options.provider ?? "ai";
     const model = options.model;

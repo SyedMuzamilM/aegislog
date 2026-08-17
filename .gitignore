@@ -5,6 +5,8 @@ node_modules
 # Build outputs
 dist
 build
+.next
+.wrangler
 .tsdown
 .turbo
 *.tsbuildinfo

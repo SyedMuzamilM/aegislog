@@ -98,11 +98,74 @@ export interface RingBufferOptions {
   flushOnError?: boolean;
 }
 
+export interface DevDisplayOptions {
+  /**
+   * Visual preset: 'default' | 'minimal' | 'compact' | 'detailed'
+   * default: 'default'
+   */
+  preset?: "default" | "minimal" | "compact" | "detailed";
+
+  /**
+   * Display emojis/icons (ℹ️, ⚠️, 🚨, 💥, 🔍, 🤖, 🛡️, 👤, 🏢, 🆔, ⚡)
+   * default: true
+   */
+  icons?: boolean;
+
+  /**
+   * Display timestamp ('time-only' | 'iso' | boolean)
+   * default: 'time-only'
+   */
+  timestamp?: "time-only" | "iso" | boolean;
+
+  /**
+   * Display context badges ([👤 user | 🏢 tenant | 🆔 reqId])
+   * default: true
+   */
+  context?:
+    | boolean
+    | {
+        actor?: boolean;
+        tenant?: boolean;
+        requestId?: boolean;
+        session?: boolean;
+        tags?: boolean;
+      };
+
+  /**
+   * Colorize terminal output with ANSI colors
+   * default: true
+   */
+  colorize?: boolean;
+
+  /**
+   * Colorize JSON metadata with syntax highlighting
+   * default: true
+   */
+  colorizeMeta?: boolean;
+
+  /**
+   * Max depth to format for nested metadata
+   * default: 4
+   */
+  depth?: number;
+
+  /**
+   * Custom filter for metadata keys
+   */
+  filterMeta?: (key: string, value: unknown) => boolean;
+
+  /**
+   * Custom badges/labels for log levels
+   */
+  badges?: Partial<Record<LogLevel, string>>;
+}
+
 export interface LoggerOptions {
   level?: LogLevel;
   namespace?: string;
   format?: "auto" | "pretty" | "json";
   shield?: ShieldOptions;
+  display?: DevDisplayOptions;
   ringBuffer?: RingBufferOptions;
   sinks?: LogSink[];
   defaultMeta?: Record<string, unknown>;

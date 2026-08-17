@@ -1,12 +1,14 @@
 import { formatDevAudit, formatDevLog } from "./formatters/dev.js";
 import { formatJsonAudit, formatJsonLog } from "./formatters/json.js";
-import type { AuditRecord, LogEntry, LogSink } from "./types.js";
+import type { AuditRecord, DevDisplayOptions, LogEntry, LogSink } from "./types.js";
 
 export class ConsoleSink implements LogSink {
   public name = "console";
   private isPretty: boolean;
+  private displayOptions: DevDisplayOptions;
 
-  constructor(format: "auto" | "pretty" | "json" = "auto") {
+  constructor(format: "auto" | "pretty" | "json" = "auto", displayOptions: DevDisplayOptions = {}) {
+    this.displayOptions = displayOptions;
     if (format === "pretty") {
       this.isPretty = true;
     } else if (format === "json") {
@@ -23,7 +25,7 @@ export class ConsoleSink implements LogSink {
 
   public log(entry: LogEntry): void {
     if (this.isPretty) {
-      const formatted = formatDevLog(entry);
+      const formatted = formatDevLog(entry, this.displayOptions);
       if (entry.level === "error" || entry.level === "fatal") {
         console.error(formatted);
       } else if (entry.level === "warn") {
@@ -43,7 +45,7 @@ export class ConsoleSink implements LogSink {
 
   public logAudit(record: AuditRecord): void {
     if (this.isPretty) {
-      console.log(formatDevAudit(record));
+      console.log(formatDevAudit(record, this.displayOptions));
     } else {
       const json = formatJsonAudit(record);
       if (typeof process !== "undefined" && process.stdout?.write) {

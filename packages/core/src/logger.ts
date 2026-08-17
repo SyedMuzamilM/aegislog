@@ -29,7 +29,9 @@ export class AegisLogger {
     this.namespace = options.namespace;
     this.shield = new SecurityShield(options.shield);
     this.sinks =
-      options.sinks && options.sinks.length > 0 ? options.sinks : [new ConsoleSink(options.format)];
+      options.sinks && options.sinks.length > 0
+        ? options.sinks
+        : [new ConsoleSink(options.format, options.display)];
     this.defaultMeta = options.defaultMeta ?? {};
     this.ringBufferOptions = {
       enabled: options.ringBuffer?.enabled ?? false,

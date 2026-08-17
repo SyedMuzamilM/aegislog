@@ -87,4 +87,30 @@ describe("AegisLog AI Tracker", () => {
     expect(errorLog?.level).toBe("error");
     expect(errorLog?.meta?.durationMs).toBeDefined();
   });
+
+  it("supports direct ai.log call for explicit event recording", () => {
+    const memory = new MemorySink();
+    const logger = createLogger({ sinks: [memory] });
+
+    logger.ai.log({
+      model: "deepseek-r1",
+      provider: "deepseek",
+      prompt: "Reason about distributed consensus",
+      completion: "Raft consensus achieves agreement via leader election...",
+      usage: { promptTokens: 300, completionTokens: 150 },
+      durationMs: 420,
+    });
+
+    const callLog = memory.entries.find((e) =>
+      e.message.includes("[AI:Call] deepseek:deepseek-r1"),
+    );
+    expect(callLog).toBeDefined();
+    expect(callLog?.level).toBe("info");
+    const meta = callLog?.meta as Record<string, unknown>;
+    const usage = meta?.usage as Record<string, unknown>;
+    expect(usage?.promptTokens).toBe(300);
+    expect(usage?.completionTokens).toBe(150);
+    expect(usage?.totalTokens).toBe(450);
+    expect(usage?.estimatedCostUsd).toBeGreaterThan(0);
+  });
 });

@@ -1,3 +1,4 @@
+import type { AiTracker } from "./ai.js";
 import type { AuditEngine } from "./audit.js";
 import { AegisLogger, createLogger } from "./logger.js";
 
@@ -17,3 +18,6 @@ export const logger: AegisLogger = createLogger();
 
 // Pre-configured default audit recorder
 export const audit: AuditEngine = logger.audit;
+
+// Pre-configured default AI tracker
+export const ai: AiTracker = logger.ai;

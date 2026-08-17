@@ -63,6 +63,18 @@ export async function withAegisContext<T>(
   );
 }
 
-export function createActionLogger(actionName: string): AegisLogger {
-  return defaultLogger.child({ namespace: `action:${actionName}` });
+export function createActionLogger(
+  actionOrOptions: string | { actionName: string; actor?: ActorContext; logger?: AegisLogger },
+): AegisLogger {
+  const actionName =
+    typeof actionOrOptions === "string" ? actionOrOptions : actionOrOptions.actionName;
+  const baseLogger =
+    typeof actionOrOptions === "object" && actionOrOptions.logger
+      ? actionOrOptions.logger
+      : defaultLogger;
+  const defaultMeta =
+    typeof actionOrOptions === "object" && actionOrOptions.actor
+      ? { actor: actionOrOptions.actor }
+      : undefined;
+  return baseLogger.child({ namespace: `action:${actionName}`, defaultMeta });
 }
