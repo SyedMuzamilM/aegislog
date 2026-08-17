@@ -15,6 +15,7 @@
     "lint:fix": "vp lint --fix",
     "fmt": "vp fmt --write",
     "format": "vp fmt --write",
+    "inspector": "pnpm --filter @aegislog/dev start",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "changeset publish"
