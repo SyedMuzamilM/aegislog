@@ -7,3 +7,5 @@ coverage
 .turbo
 next-env.d.ts
 *.d.ts
+**/CHANGELOG.md
+CHANGELOG.md

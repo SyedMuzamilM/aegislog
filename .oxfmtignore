@@ -5,3 +5,5 @@ build
 .wrangler
 coverage
 .turbo
+**/CHANGELOG.md
+CHANGELOG.md
