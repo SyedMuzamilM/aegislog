@@ -1,4 +1,4 @@
-import type { AuditRecord, LogEntry, LogSink } from 'aegislog';
+import type { AuditRecord, LogEntry, LogSink } from "aegislog";
 
 export interface HttpBatchSinkOptions {
   name?: string;
@@ -21,10 +21,10 @@ export class HttpBatchSink implements LogSink {
   private timer?: ReturnType<typeof setTimeout>;
 
   constructor(options: HttpBatchSinkOptions) {
-    this.name = options.name ?? 'http-batch';
+    this.name = options.name ?? "http-batch";
     this.url = options.url;
     this.headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...options.headers,
     };
     this.batchSize = options.batchSize ?? 50;
@@ -72,9 +72,9 @@ export class HttpBatchSink implements LogSink {
       : { logs: entries, audit: auditRecords };
 
     try {
-      if (typeof fetch !== 'undefined') {
+      if (typeof fetch !== "undefined") {
         await fetch(this.url, {
-          method: 'POST',
+          method: "POST",
           headers: this.headers,
           body: JSON.stringify(payload),
         });
@@ -86,13 +86,18 @@ export class HttpBatchSink implements LogSink {
 }
 
 export class AxiomSink extends HttpBatchSink {
-  constructor(options: { dataset: string; token: string; batchSize?: number; flushIntervalMs?: number }) {
+  constructor(options: {
+    dataset: string;
+    token: string;
+    batchSize?: number;
+    flushIntervalMs?: number;
+  }) {
     super({
-      name: 'axiom',
+      name: "axiom",
       url: `https://api.axiom.co/v1/datasets/${options.dataset}/ingest`,
       headers: {
         Authorization: `Bearer ${options.token}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       batchSize: options.batchSize,
       flushIntervalMs: options.flushIntervalMs,

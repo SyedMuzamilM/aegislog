@@ -1,10 +1,11 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
-import type { ActorContext, AegisContext, SessionContext, TenantContext } from './types.js';
+import { AsyncLocalStorage } from "node:async_hooks";
+import type { ActorContext, AegisContext, SessionContext, TenantContext } from "./types.js";
 
-export const contextStorage: AsyncLocalStorage<AegisContext> = new AsyncLocalStorage<AegisContext>();
+export const contextStorage: AsyncLocalStorage<AegisContext> =
+  new AsyncLocalStorage<AegisContext>();
 
 export function generateId(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }
   return `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
@@ -12,7 +13,7 @@ export function generateId(): string {
 
 export function runWithContext<T>(
   ctx: Partial<AegisContext> & { requestId?: string },
-  fn: () => T
+  fn: () => T,
 ): T {
   const fullContext: AegisContext = {
     requestId: ctx.requestId ?? generateId(),
@@ -94,4 +95,3 @@ export const context: ContextManager = {
   setData: setData,
   generateId: generateId,
 };
-

@@ -1,35 +1,35 @@
-import type { ShieldOptions } from './types.js';
+import type { ShieldOptions } from "./types.js";
 
 const DEFAULT_SENSITIVE_KEYS = new Set([
-  'password',
-  'pass',
-  'passwd',
-  'secret',
-  'token',
-  'bearer',
-  'authorization',
-  'apikey',
-  'api_key',
-  'access_token',
-  'refresh_token',
-  'id_token',
-  'private_key',
-  'privatekey',
-  'certificate',
-  'creditcard',
-  'credit_card',
-  'cardnumber',
-  'card_number',
-  'cvv',
-  'cvc',
-  'pan',
-  'ssn',
-  'social_security',
-  'cookie',
-  'set-cookie',
-  'session_token',
-  'session_secret',
-  'webhook_secret',
+  "password",
+  "pass",
+  "passwd",
+  "secret",
+  "token",
+  "bearer",
+  "authorization",
+  "apikey",
+  "api_key",
+  "access_token",
+  "refresh_token",
+  "id_token",
+  "private_key",
+  "privatekey",
+  "certificate",
+  "creditcard",
+  "credit_card",
+  "cardnumber",
+  "card_number",
+  "cvv",
+  "cvc",
+  "pan",
+  "ssn",
+  "social_security",
+  "cookie",
+  "set-cookie",
+  "session_token",
+  "session_secret",
+  "webhook_secret",
 ]);
 
 const BEARER_REGEX = /Bearer\s+[A-Za-z0-9\-_.]{10,}/gi;
@@ -48,7 +48,7 @@ export class SecurityShield {
 
   constructor(options: ShieldOptions = {}) {
     this.enabled = options.enabled ?? true;
-    this.maskString = options.maskString ?? '[REDACTED]';
+    this.maskString = options.maskString ?? "[REDACTED]";
     this.maxDepth = options.maxDepth ?? 6;
     this.maxStringLength = options.maxStringLength ?? 10000;
     this.customMasker = options.customMasker;
@@ -62,15 +62,15 @@ export class SecurityShield {
   }
 
   public isSensitiveKey(key: string): boolean {
-    const normalized = key.toLowerCase().replace(/[-_]/g, '');
+    const normalized = key.toLowerCase().replace(/[-_]/g, "");
     if (this.sensitiveKeys.has(key.toLowerCase()) || this.sensitiveKeys.has(normalized)) {
       return true;
     }
     return (
-      normalized.includes('password') ||
-      normalized.includes('secret') ||
-      normalized.includes('apikey') ||
-      normalized.includes('privkey')
+      normalized.includes("password") ||
+      normalized.includes("secret") ||
+      normalized.includes("apikey") ||
+      normalized.includes("privkey")
     );
   }
 
@@ -82,12 +82,12 @@ export class SecurityShield {
       result = `${result.slice(0, this.maxStringLength)}... [TRUNCATED]`;
     }
 
-    result = result.replace(BEARER_REGEX, 'Bearer [REDACTED_TOKEN]');
-    result = result.replace(JWT_REGEX, '[REDACTED_JWT]');
-    result = result.replace(API_KEY_REGEX, 'sk-[REDACTED_KEY]');
-    result = result.replace(AWS_KEY_REGEX, 'AKIA[REDACTED_KEY]');
+    result = result.replace(BEARER_REGEX, "Bearer [REDACTED_TOKEN]");
+    result = result.replace(JWT_REGEX, "[REDACTED_JWT]");
+    result = result.replace(API_KEY_REGEX, "sk-[REDACTED_KEY]");
+    result = result.replace(AWS_KEY_REGEX, "AKIA[REDACTED_KEY]");
     result = result.replace(CREDIT_CARD_REGEX, (match) => {
-      const cleaned = match.replace(/[-\s]/g, '');
+      const cleaned = match.replace(/[-\s]/g, "");
       return `****-****-****-${cleaned.slice(-4)}`;
     });
 
@@ -100,12 +100,12 @@ export class SecurityShield {
     }
 
     const seen = new WeakSet();
-    return this.walk(data, '', 0, seen) as T;
+    return this.walk(data, "", 0, seen) as T;
   }
 
   private walk(val: unknown, key: string, depth: number, seen: WeakSet<object>): unknown {
     if (depth > this.maxDepth) {
-      return '[MAX_DEPTH_EXCEEDED]';
+      return "[MAX_DEPTH_EXCEEDED]";
     }
 
     if (this.customMasker && key) {
@@ -123,11 +123,11 @@ export class SecurityShield {
       return val;
     }
 
-    if (typeof val === 'string') {
+    if (typeof val === "string") {
       return this.sanitizeString(val);
     }
 
-    if (typeof val === 'number' || typeof val === 'boolean' || typeof val === 'bigint') {
+    if (typeof val === "number" || typeof val === "boolean" || typeof val === "bigint") {
       return val;
     }
 
@@ -139,9 +139,9 @@ export class SecurityShield {
       return val.toISOString();
     }
 
-    if (typeof val === 'object') {
+    if (typeof val === "object") {
       if (seen.has(val)) {
-        return '[CIRCULAR_REF]';
+        return "[CIRCULAR_REF]";
       }
       seen.add(val);
 
@@ -159,19 +159,23 @@ export class SecurityShield {
     return String(val);
   }
 
-  private serializeError(err: Error, depth: number, seen: WeakSet<object>): Record<string, unknown> {
+  private serializeError(
+    err: Error,
+    depth: number,
+    seen: WeakSet<object>,
+  ): Record<string, unknown> {
     const serialized: Record<string, unknown> = {
       name: err.name,
       message: this.sanitizeString(err.message),
       stack: err.stack ? this.sanitizeString(err.stack) : undefined,
     };
 
-    if ('code' in err) {
+    if ("code" in err) {
       serialized.code = (err as unknown as { code: unknown }).code;
     }
 
-    if ('cause' in err && err.cause) {
-      serialized.cause = this.walk(err.cause, 'cause', depth + 1, seen);
+    if ("cause" in err && err.cause) {
+      serialized.cause = this.walk(err.cause, "cause", depth + 1, seen);
     }
 
     // Attach any custom properties on the error object

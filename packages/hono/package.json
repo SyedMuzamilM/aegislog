@@ -2,6 +2,11 @@
   "name": "@aegislog/hono",
   "version": "0.1.0",
   "description": "Hono and Cloudflare Workers middleware adapter for AegisLog.",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -13,10 +18,6 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": [
-    "dist",
-    "README.md"
-  ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap",
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
@@ -25,11 +26,10 @@
   "dependencies": {
     "aegislog": "workspace:*"
   },
-  "peerDependencies": {
-    "hono": ">=3.0.0 || >=4.0.0"
-  },
   "devDependencies": {
     "hono": "^4.7.2"
   },
-  "license": "MIT"
+  "peerDependencies": {
+    "hono": ">=3.0.0 || >=4.0.0"
+  }
 }

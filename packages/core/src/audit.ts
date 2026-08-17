@@ -1,6 +1,6 @@
-import { generateId, getContext } from './context.js';
-import { SecurityShield } from './shield.js';
-import type { AuditRecord, LogSink } from './types.js';
+import { generateId, getContext } from "./context.js";
+import { SecurityShield } from "./shield.js";
+import type { AuditRecord, LogSink } from "./types.js";
 
 export class AuditEngine {
   private sinks: LogSink[];
@@ -23,11 +23,15 @@ export class AuditEngine {
       tenant: record.tenant ?? ambient?.tenant,
       session: record.session ?? ambient?.session,
       traceId: record.traceId ?? ambient?.traceId,
-      changes: record.changes ? (this.shield.sanitize(record.changes) as typeof record.changes) : undefined,
+      changes: record.changes
+        ? (this.shield.sanitize(record.changes) as typeof record.changes)
+        : undefined,
       target: record.target,
-      details: record.details ? (this.shield.sanitize(record.details) as typeof record.details) : undefined,
+      details: record.details
+        ? (this.shield.sanitize(record.details) as typeof record.details)
+        : undefined,
       reason: record.reason,
-      outcome: record.outcome ?? 'success',
+      outcome: record.outcome ?? "success",
     };
 
     for (const sink of this.sinks) {

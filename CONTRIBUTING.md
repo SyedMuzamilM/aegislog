@@ -7,27 +7,32 @@ Thank you for your interest in contributing to AegisLog! We are building the nex
 ## 🛠️ Development Setup
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/your-org/aegislog.git
    cd aegislog
    ```
 
 2. **Install dependencies with pnpm:**
+
    ```bash
    pnpm install
    ```
 
 3. **Build all packages:**
+
    ```bash
    pnpm build
    ```
 
 4. **Run the test suite:**
+
    ```bash
    pnpm test
    ```
 
 5. **Run the microbenchmarking suite:**
+
    ```bash
    pnpm bench
    ```
@@ -49,4 +54,5 @@ Thank you for your interest in contributing to AegisLog! We are building the nex
 ---
 
 ## 📄 License
+
 MIT © 2026 AegisLog Contributors

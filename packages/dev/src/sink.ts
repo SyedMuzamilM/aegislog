@@ -1,4 +1,4 @@
-import type { AuditRecord, LogEntry, LogSink } from 'aegislog';
+import type { AuditRecord, LogEntry, LogSink } from "aegislog";
 
 export interface DevViewerSinkOptions {
   port?: number;
@@ -6,12 +6,12 @@ export interface DevViewerSinkOptions {
 }
 
 export class DevViewerSink implements LogSink {
-  public name = 'dev-viewer';
+  public name = "dev-viewer";
   private url: string;
 
   constructor(options: DevViewerSinkOptions = {}) {
     const port = options.port ?? 4319;
-    const host = options.host ?? '127.0.0.1';
+    const host = options.host ?? "127.0.0.1";
     this.url = `http://${host}:${port}/api/events`;
   }
 
@@ -25,10 +25,10 @@ export class DevViewerSink implements LogSink {
 
   private async send(payload: unknown): Promise<void> {
     try {
-      if (typeof fetch !== 'undefined') {
+      if (typeof fetch !== "undefined") {
         await fetch(this.url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
       }

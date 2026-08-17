@@ -1,18 +1,17 @@
-import { AiTracker } from './ai.js';
-import { AuditEngine } from './audit.js';
-import { getContext } from './context.js';
-import { type LogEventDefinition, validateEventData } from './schema.js';
-import { SecurityShield } from './shield.js';
-import { ConsoleSink } from './sinks.js';
+import { AiTracker } from "./ai.js";
+import { AuditEngine } from "./audit.js";
+import { getContext } from "./context.js";
+import { type LogEventDefinition, validateEventData } from "./schema.js";
+import { SecurityShield } from "./shield.js";
+import { ConsoleSink } from "./sinks.js";
 import {
   LOG_LEVEL_SEVERITY,
-  type AuditRecord,
   type LogEntry,
   type LogLevel,
   type LogSink,
   type LoggerOptions,
   type RingBufferOptions,
-} from './types.js';
+} from "./types.js";
 
 export class AegisLogger {
   private level: LogLevel;
@@ -26,10 +25,11 @@ export class AegisLogger {
   public ai: AiTracker;
 
   constructor(options: LoggerOptions = {}) {
-    this.level = options.level ?? 'info';
+    this.level = options.level ?? "info";
     this.namespace = options.namespace;
     this.shield = new SecurityShield(options.shield);
-    this.sinks = options.sinks && options.sinks.length > 0 ? options.sinks : [new ConsoleSink(options.format)];
+    this.sinks =
+      options.sinks && options.sinks.length > 0 ? options.sinks : [new ConsoleSink(options.format)];
     this.defaultMeta = options.defaultMeta ?? {};
     this.ringBufferOptions = {
       enabled: options.ringBuffer?.enabled ?? false,
@@ -46,7 +46,7 @@ export class AegisLogger {
 
   private emit(entry: LogEntry): void {
     // If ring buffer is enabled and entry is below current level (e.g. debug while level is info)
-    if (this.ringBufferOptions.enabled && (entry.level === 'debug' || entry.level === 'trace')) {
+    if (this.ringBufferOptions.enabled && (entry.level === "debug" || entry.level === "trace")) {
       this.ringBuffer.push(entry);
       if (this.ringBuffer.length > (this.ringBufferOptions.capacity ?? 25)) {
         this.ringBuffer.shift();
@@ -61,7 +61,7 @@ export class AegisLogger {
     if (
       this.ringBufferOptions.enabled &&
       this.ringBufferOptions.flushOnError &&
-      (entry.level === 'error' || entry.level === 'fatal') &&
+      (entry.level === "error" || entry.level === "fatal") &&
       this.ringBuffer.length > 0
     ) {
       const buffered = [...this.ringBuffer];
@@ -86,7 +86,7 @@ export class AegisLogger {
     level: LogLevel,
     message: string,
     meta?: Record<string, unknown>,
-    error?: Error | { name: string; message: string; stack?: string; cause?: unknown }
+    error?: Error | { name: string; message: string; stack?: string; cause?: unknown },
   ): LogEntry {
     const ambientContext = getContext();
 
@@ -100,73 +100,83 @@ export class AegisLogger {
       message: this.shield.sanitizeString(message),
       timestamp: new Date().toISOString(),
       namespace: this.namespace,
-      context: ambientContext ? (this.shield.sanitize(ambientContext) as typeof ambientContext) : undefined,
+      context: ambientContext
+        ? (this.shield.sanitize(ambientContext) as typeof ambientContext)
+        : undefined,
       meta: Object.keys(mergedMeta).length > 0 ? mergedMeta : undefined,
       error: error ? (this.shield.sanitize(error) as Error) : undefined,
     };
   }
 
   public trace(message: string, meta?: Record<string, unknown>): void {
-    this.emit(this.createEntry('trace', message, meta));
+    this.emit(this.createEntry("trace", message, meta));
   }
 
   public debug(message: string, meta?: Record<string, unknown>): void {
-    this.emit(this.createEntry('debug', message, meta));
+    this.emit(this.createEntry("debug", message, meta));
   }
 
   public info(message: string, meta?: Record<string, unknown>): void {
-    this.emit(this.createEntry('info', message, meta));
+    this.emit(this.createEntry("info", message, meta));
   }
 
   public warn(message: string, meta?: Record<string, unknown>): void {
-    this.emit(this.createEntry('warn', message, meta));
+    this.emit(this.createEntry("warn", message, meta));
   }
 
-  public error(message: string, metaOrError?: Record<string, unknown> | Error, error?: Error): void {
+  public error(
+    message: string,
+    metaOrError?: Record<string, unknown> | Error,
+    error?: Error,
+  ): void {
     let meta: Record<string, unknown> | undefined;
     let err: Error | undefined = error;
 
     if (metaOrError instanceof Error) {
       err = metaOrError;
-    } else if (metaOrError && typeof metaOrError === 'object') {
+    } else if (metaOrError && typeof metaOrError === "object") {
       meta = metaOrError;
-      if ('error' in meta && meta.error instanceof Error) {
+      if ("error" in meta && meta.error instanceof Error) {
         err = meta.error;
       }
     }
 
-    this.emit(this.createEntry('error', message, meta, err));
+    this.emit(this.createEntry("error", message, meta, err));
   }
 
-  public fatal(message: string, metaOrError?: Record<string, unknown> | Error, error?: Error): void {
+  public fatal(
+    message: string,
+    metaOrError?: Record<string, unknown> | Error,
+    error?: Error,
+  ): void {
     let meta: Record<string, unknown> | undefined;
     let err: Error | undefined = error;
 
     if (metaOrError instanceof Error) {
       err = metaOrError;
-    } else if (metaOrError && typeof metaOrError === 'object') {
+    } else if (metaOrError && typeof metaOrError === "object") {
       meta = metaOrError;
-      if ('error' in meta && meta.error instanceof Error) {
+      if ("error" in meta && meta.error instanceof Error) {
         err = meta.error;
       }
     }
 
-    this.emit(this.createEntry('fatal', message, meta, err));
+    this.emit(this.createEntry("fatal", message, meta, err));
   }
 
   public event<TName extends string, TData>(
     definition: LogEventDefinition<TName, TData>,
     data: TData,
-    meta?: Record<string, unknown>
+    meta?: Record<string, unknown>,
   ): void {
     const validatedData = validateEventData(definition.schema, data);
-    const level = definition.level ?? 'info';
+    const level = definition.level ?? "info";
     this.emit(
       this.createEntry(level, `[Event: ${definition.name}]`, {
         event: definition.name,
         payload: validatedData as Record<string, unknown>,
         ...meta,
-      })
+      }),
     );
   }
 
@@ -179,7 +189,10 @@ export class AegisLogger {
     };
   }
 
-  public child(options: { namespace?: string; defaultMeta?: Record<string, unknown> }): AegisLogger {
+  public child(options: {
+    namespace?: string;
+    defaultMeta?: Record<string, unknown>;
+  }): AegisLogger {
     const newNamespace = this.namespace
       ? options.namespace
         ? `${this.namespace}:${options.namespace}`

@@ -1,5 +1,11 @@
-import type { Context, MiddlewareHandler } from 'hono';
-import { type ActorContext, type TenantContext, logger as defaultLogger, runWithContext, type AegisLogger } from 'aegislog';
+import type { Context, MiddlewareHandler } from "hono";
+import {
+  type ActorContext,
+  type TenantContext,
+  logger as defaultLogger,
+  runWithContext,
+  type AegisLogger,
+} from "aegislog";
 
 export interface HonoAegisOptions {
   logger?: AegisLogger;
@@ -22,19 +28,19 @@ export function aegisMiddleware(options: HonoAegisOptions = {}): MiddlewareHandl
     };
 
     const requestId =
-      getHdr('x-request-id') ||
-      getHdr('cf-ray') ||
+      getHdr("x-request-id") ||
+      getHdr("cf-ray") ||
       `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
 
-    const traceHeader = getHdr('traceparent') || getHdr('x-trace-id');
-    const traceId = traceHeader ? traceHeader.split('-')[1] || traceHeader : undefined;
+    const traceHeader = getHdr("traceparent") || getHdr("x-trace-id");
+    const traceId = traceHeader ? traceHeader.split("-")[1] || traceHeader : undefined;
 
     const ip =
-      getHdr('cf-connecting-ip') ||
-      getHdr('x-real-ip') ||
-      getHdr('x-forwarded-for')?.split(',')[0]?.trim();
+      getHdr("cf-connecting-ip") ||
+      getHdr("x-real-ip") ||
+      getHdr("x-forwarded-for")?.split(",")[0]?.trim();
 
-    const userAgent = getHdr('user-agent');
+    const userAgent = getHdr("user-agent");
 
     const actor = options.getActor ? await options.getActor(c) : undefined;
     const tenant = options.getTenant ? await options.getTenant(c) : undefined;
@@ -70,13 +76,13 @@ export function aegisMiddleware(options: HonoAegisOptions = {}): MiddlewareHandl
         const duration = Number((performance.now() - start).toFixed(2));
         if (logRequests) {
           const status = c.res.status;
-          const level = status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info';
-          if (level === 'error') {
+          const level = status >= 500 ? "error" : status >= 400 ? "warn" : "info";
+          if (level === "error") {
             log.error(`<-- ${c.req.method} ${c.req.path} ${status} in ${duration}ms`, {
               status,
               durationMs: duration,
             });
-          } else if (level === 'warn') {
+          } else if (level === "warn") {
             log.warn(`<-- ${c.req.method} ${c.req.path} ${status} in ${duration}ms`, {
               status,
               durationMs: duration,
@@ -88,7 +94,7 @@ export function aegisMiddleware(options: HonoAegisOptions = {}): MiddlewareHandl
             });
           }
         }
-      }
+      },
     );
   };
 }

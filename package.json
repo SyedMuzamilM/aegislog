@@ -7,14 +7,14 @@
   "scripts": {
     "build": "pnpm -r --filter './packages/*' run build",
     "dev": "pnpm -r --parallel --filter './packages/*' run dev",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "check": "vp check",
+    "test": "vp test --run",
     "bench": "vitest bench",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write .",
-    "format": "biome format --write ."
+    "lint": "vp lint",
+    "lint:fix": "vp lint --fix",
+    "fmt": "vp fmt --write",
+    "format": "vp fmt --write"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
@@ -22,10 +22,11 @@
     "tsdown": "^0.5.9",
     "tsup": "^8.5.1",
     "typescript": "^5.7.3",
+    "vite-plus": "^0.2.9",
     "vitest": "^3.0.5"
   },
-  "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "packageManager": "pnpm@10.33.0"
 }

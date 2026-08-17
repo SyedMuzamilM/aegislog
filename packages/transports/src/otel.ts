@@ -1,4 +1,4 @@
-import type { LogEntry, LogSink, LogLevel } from 'aegislog';
+import type { LogEntry, LogSink, LogLevel } from "aegislog";
 
 export interface OpenTelemetrySinkOptions {
   endpoint?: string;
@@ -20,7 +20,7 @@ const OTEL_SEVERITY_NUMBERS: Record<LogLevel, number> = {
 };
 
 export class OpenTelemetrySink implements LogSink {
-  public name = 'opentelemetry';
+  public name = "opentelemetry";
   private endpoint: string;
   private serviceName: string;
   private serviceVersion?: string;
@@ -32,12 +32,12 @@ export class OpenTelemetrySink implements LogSink {
   private timer?: ReturnType<typeof setTimeout>;
 
   constructor(options: OpenTelemetrySinkOptions = {}) {
-    this.endpoint = options.endpoint ?? 'http://localhost:4318/v1/logs';
-    this.serviceName = options.serviceName ?? 'aegislog-service';
+    this.endpoint = options.endpoint ?? "http://localhost:4318/v1/logs";
+    this.serviceName = options.serviceName ?? "aegislog-service";
     this.serviceVersion = options.serviceVersion;
     this.environment = options.environment;
     this.headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...options.headers,
     };
     this.batchSize = options.batchSize ?? 50;
@@ -70,29 +70,39 @@ export class OpenTelemetrySink implements LogSink {
     this.queue = [];
 
     const resourceAttributes: Array<{ key: string; value: { stringValue: string } }> = [
-      { key: 'service.name', value: { stringValue: this.serviceName } },
+      { key: "service.name", value: { stringValue: this.serviceName } },
     ];
     if (this.serviceVersion) {
-      resourceAttributes.push({ key: 'service.version', value: { stringValue: this.serviceVersion } });
+      resourceAttributes.push({
+        key: "service.version",
+        value: { stringValue: this.serviceVersion },
+      });
     }
     if (this.environment) {
-      resourceAttributes.push({ key: 'deployment.environment', value: { stringValue: this.environment } });
+      resourceAttributes.push({
+        key: "deployment.environment",
+        value: { stringValue: this.environment },
+      });
     }
 
     const logRecords = batch.map((entry) => {
-      const attributes: Array<{ key: string; value: { stringValue?: string; intValue?: number } }> = [];
+      const attributes: Array<{ key: string; value: { stringValue?: string; intValue?: number } }> =
+        [];
 
       if (entry.namespace) {
-        attributes.push({ key: 'logger.namespace', value: { stringValue: entry.namespace } });
+        attributes.push({ key: "logger.namespace", value: { stringValue: entry.namespace } });
       }
       if (entry.context?.actor?.id) {
-        attributes.push({ key: 'user.id', value: { stringValue: entry.context.actor.id } });
+        attributes.push({ key: "user.id", value: { stringValue: entry.context.actor.id } });
       }
       if (entry.context?.tenant?.id) {
-        attributes.push({ key: 'tenant.id', value: { stringValue: entry.context.tenant.id } });
+        attributes.push({ key: "tenant.id", value: { stringValue: entry.context.tenant.id } });
       }
       if (entry.context?.requestId) {
-        attributes.push({ key: 'http.request_id', value: { stringValue: entry.context.requestId } });
+        attributes.push({
+          key: "http.request_id",
+          value: { stringValue: entry.context.requestId },
+        });
       }
 
       const nanoTime = `${new Date(entry.timestamp).getTime()}000000`;
@@ -115,7 +125,7 @@ export class OpenTelemetrySink implements LogSink {
           resource: { attributes: resourceAttributes },
           scopeLogs: [
             {
-              scope: { name: 'aegislog' },
+              scope: { name: "aegislog" },
               logRecords,
             },
           ],
@@ -124,9 +134,9 @@ export class OpenTelemetrySink implements LogSink {
     };
 
     try {
-      if (typeof fetch !== 'undefined') {
+      if (typeof fetch !== "undefined") {
         await fetch(this.endpoint, {
-          method: 'POST',
+          method: "POST",
           headers: this.headers,
           body: JSON.stringify(otelPayload),
         });

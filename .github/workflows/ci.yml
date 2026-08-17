@@ -29,19 +29,25 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
+          cache: "pnpm"
+
+      - name: Set up Vite+
+        uses: voidzero-dev/setup-vp@v1
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Build packages
         run: pnpm build
+
+      - name: Run Vite+ format and lint checks
+        run: vp check
 
       - name: Typecheck
         run: pnpm typecheck
 
       - name: Run unit tests
-        run: pnpm test
+        run: vp test --run
 
       - name: Run microbenchmarks
         run: pnpm bench

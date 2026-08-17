@@ -40,22 +40,24 @@ Traditional loggers like **Winston** (too heavy, legacy) and **Pino** (breaks on
 ## ⚡ Quick Start
 
 ### 1. Zero-Config Logging
-```typescript
-import { logger } from 'aegislog';
 
-logger.info('Server initialized', { port: 3000 });
-logger.warn('Rate limit approaching', { ip: '192.168.1.1', attempts: 4 });
+```typescript
+import { logger } from "aegislog";
+
+logger.info("Server initialized", { port: 3000 });
+logger.warn("Rate limit approaching", { ip: "192.168.1.1", attempts: 4 });
 ```
 
 ### 2. Ambient User Context (e.g. Next.js Server Action)
-```typescript
-'use server';
 
-import { withAegisContext, logger } from 'aegislog/next';
+```typescript
+"use server";
+
+import { withAegisContext, logger } from "aegislog/next";
 
 export async function createTeamAction(teamName: string) {
-  return withAegisContext({ actor: { id: 'usr_881', email: 'sarah@acme.com' } }, async () => {
-    logger.info('Creating new workspace', { teamName });
+  return withAegisContext({ actor: { id: "usr_881", email: "sarah@acme.com" } }, async () => {
+    logger.info("Creating new workspace", { teamName });
     // Any downstream database queries or helper functions automatically include sarah@acme.com!
     await teamService.create(teamName);
   });
@@ -63,11 +65,12 @@ export async function createTeamAction(teamName: string) {
 ```
 
 ### 3. Automatic "Helmet" Shield Sanitization
+
 ```typescript
 // Even if you log a raw request object with authorization headers or passwords:
-logger.error('Failed API call', {
-  headers: { authorization: 'Bearer eyJhbGciOiJIUzI1Ni...' },
-  body: { email: 'user@test.com', password: 'SuperSecretPassword123' }
+logger.error("Failed API call", {
+  headers: { authorization: "Bearer eyJhbGciOiJIUzI1Ni..." },
+  body: { email: "user@test.com", password: "SuperSecretPassword123" },
 });
 
 // Output automatically sanitizes:
@@ -78,14 +81,15 @@ logger.error('Failed API call', {
 ```
 
 ### 4. SOC2 Audit Trail Logging
+
 ```typescript
-import { audit } from 'aegislog';
+import { audit } from "aegislog";
 
 audit.record({
-  action: 'billing.subscription_cancelled',
-  resource: { type: 'subscription', id: 'sub_9912' },
-  reason: 'Customer downgraded to free plan',
-  outcome: 'success'
+  action: "billing.subscription_cancelled",
+  resource: { type: "subscription", id: "sub_9912" },
+  reason: "Customer downgraded to free plan",
+  outcome: "success",
 });
 ```
 
@@ -93,16 +97,16 @@ audit.record({
 
 ## 📊 Feature Comparison
 
-| Feature | **AegisLog** | **Pino** | **Winston** | **LogTape** |
-| :--- | :---: | :---: | :---: | :---: |
-| **Strict TypeScript Native** | ✅ | ⚠️ | ❌ | ✅ |
-| **Zero-Config Pretty Dev Terminal** | ✅ (Built-in) | ❌ (Needs CLI pipe) | ⚠️ (Manual formatters) | ⚠️ |
-| **Edge & Serverless Compatible** | ✅ (Universal) | ❌ (Worker crash) | ❌ | ✅ |
-| **Ambient Context (`AsyncLocalStorage`)** | ✅ (First-class) | ⚠️ (`pino-http`) | ❌ | ⚠️ |
-| **"Helmet" Security & PII Shield** | ✅ (Built-in) | ⚠️ (Manual regex) | ⚠️ | ❌ |
-| **Business Audit Trail Separation** | ✅ (Built-in) | ❌ | ❌ | ❌ |
-| **Type-Safe Schemas (Zod / Valibot)**| ✅ (Optional) | ❌ | ❌ | ❌ |
-| **OpenTelemetry Trace Correlation**  | ✅ (Native) | ⚠️ (Plugins) | ⚠️ (Plugins) | ✅ |
+| Feature                                   |   **AegisLog**   |      **Pino**       |      **Winston**       | **LogTape** |
+| :---------------------------------------- | :--------------: | :-----------------: | :--------------------: | :---------: |
+| **Strict TypeScript Native**              |        ✅        |         ⚠️          |           ❌           |     ✅      |
+| **Zero-Config Pretty Dev Terminal**       |  ✅ (Built-in)   | ❌ (Needs CLI pipe) | ⚠️ (Manual formatters) |     ⚠️      |
+| **Edge & Serverless Compatible**          |  ✅ (Universal)  |  ❌ (Worker crash)  |           ❌           |     ✅      |
+| **Ambient Context (`AsyncLocalStorage`)** | ✅ (First-class) |  ⚠️ (`pino-http`)   |           ❌           |     ⚠️      |
+| **"Helmet" Security & PII Shield**        |  ✅ (Built-in)   |  ⚠️ (Manual regex)  |           ⚠️           |     ❌      |
+| **Business Audit Trail Separation**       |  ✅ (Built-in)   |         ❌          |           ❌           |     ❌      |
+| **Type-Safe Schemas (Zod / Valibot)**     |  ✅ (Optional)   |         ❌          |           ❌           |     ❌      |
+| **OpenTelemetry Trace Correlation**       |   ✅ (Native)    |    ⚠️ (Plugins)     |      ⚠️ (Plugins)      |     ✅      |
 
 ---
 

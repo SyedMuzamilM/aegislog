@@ -1,4 +1,4 @@
-import type { AuditRecord, LogEntry } from '../types.js';
+import type { AuditRecord, LogEntry } from "../types.js";
 
 export function formatJsonLog(entry: LogEntry): string {
   const payload: Record<string, unknown> = {
@@ -43,7 +43,7 @@ export function formatJsonLog(entry: LogEntry): string {
 
 export function formatJsonAudit(record: AuditRecord): string {
   return JSON.stringify({
-    type: 'audit',
+    type: "audit",
     ...record,
   });
 }

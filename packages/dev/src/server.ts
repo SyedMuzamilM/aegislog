@@ -1,6 +1,6 @@
-import http from 'node:http';
-import { DASHBOARD_HTML } from './ui.js';
-import type { AuditRecord, LogEntry } from 'aegislog';
+import http from "node:http";
+import { DASHBOARD_HTML } from "./ui.js";
+import type { AuditRecord, LogEntry } from "aegislog";
 
 export interface DevServerOptions {
   port?: number;
@@ -16,7 +16,7 @@ export class DevServer {
 
   constructor(options: DevServerOptions = {}) {
     this.port = options.port ?? 4319;
-    this.host = options.host ?? '127.0.0.1';
+    this.host = options.host ?? "127.0.0.1";
   }
 
   public broadcast(event: LogEntry | AuditRecord): void {
@@ -38,30 +38,30 @@ export class DevServer {
   public start(): Promise<string> {
     return new Promise((resolve, reject) => {
       this.server = http.createServer((req, res) => {
-        const url = req.url || '/';
+        const url = req.url || "/";
 
         // CORS headers for local development
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-        if (req.method === 'OPTIONS') {
+        if (req.method === "OPTIONS") {
           res.writeHead(204);
           res.end();
           return;
         }
 
-        if (url === '/' || url === '/index.html') {
-          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        if (url === "/" || url === "/index.html") {
+          res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
           res.end(DASHBOARD_HTML);
           return;
         }
 
-        if (url === '/api/stream') {
+        if (url === "/api/stream") {
           res.writeHead(200, {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            Connection: 'keep-alive',
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
           });
 
           this.clients.add(res);
@@ -71,33 +71,33 @@ export class DevServer {
             res.write(`data: ${JSON.stringify(item)}\n\n`);
           }
 
-          req.on('close', () => {
+          req.on("close", () => {
             this.clients.delete(res);
           });
           return;
         }
 
-        if (url === '/api/events' && req.method === 'POST') {
-          let body = '';
-          req.on('data', (chunk) => {
+        if (url === "/api/events" && req.method === "POST") {
+          let body = "";
+          req.on("data", (chunk) => {
             body += chunk;
           });
-          req.on('end', () => {
+          req.on("end", () => {
             try {
               const event = JSON.parse(body);
               this.broadcast(event);
-              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.writeHead(200, { "Content-Type": "application/json" });
               res.end(JSON.stringify({ ok: true }));
             } catch {
               res.writeHead(400);
-              res.end(JSON.stringify({ error: 'Invalid JSON' }));
+              res.end(JSON.stringify({ error: "Invalid JSON" }));
             }
           });
           return;
         }
 
         res.writeHead(404);
-        res.end('Not Found');
+        res.end("Not Found");
       });
 
       this.server.listen(this.port, this.host, () => {
@@ -105,7 +105,7 @@ export class DevServer {
         resolve(url);
       });
 
-      this.server.on('error', reject);
+      this.server.on("error", reject);
     });
   }
 

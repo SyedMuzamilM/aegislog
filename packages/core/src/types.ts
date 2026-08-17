@@ -1,4 +1,4 @@
-export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
 
 export const LOG_LEVEL_SEVERITY: Record<LogLevel, number> = {
   trace: 10,
@@ -81,7 +81,7 @@ export interface AuditRecord {
   target?: { type: string; id: string; [key: string]: unknown };
   details?: Record<string, unknown>;
   reason?: string;
-  outcome?: 'success' | 'failure' | 'denied';
+  outcome?: "success" | "failure" | "denied";
   traceId?: string;
 }
 
@@ -101,7 +101,7 @@ export interface RingBufferOptions {
 export interface LoggerOptions {
   level?: LogLevel;
   namespace?: string;
-  format?: 'auto' | 'pretty' | 'json';
+  format?: "auto" | "pretty" | "json";
   shield?: ShieldOptions;
   ringBuffer?: RingBufferOptions;
   sinks?: LogSink[];
