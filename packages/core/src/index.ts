@@ -6,6 +6,7 @@ export * from './context.js';
 export * from './shield.js';
 export * from './sinks.js';
 export * from './audit.js';
+export * from './ai.js';
 export * from './formatters/dev.js';
 export * from './formatters/json.js';
 export * from './logger.js';

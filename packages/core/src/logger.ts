@@ -1,3 +1,4 @@
+import { AiTracker } from './ai.js';
 import { AuditEngine } from './audit.js';
 import { getContext } from './context.js';
 import { SecurityShield } from './shield.js';
@@ -21,6 +22,7 @@ export class AegisLogger {
   private ringBufferOptions: RingBufferOptions;
   private ringBuffer: LogEntry[] = [];
   public audit: AuditEngine;
+  public ai: AiTracker;
 
   constructor(options: LoggerOptions = {}) {
     this.level = options.level ?? 'info';
@@ -34,6 +36,7 @@ export class AegisLogger {
       flushOnError: options.ringBuffer?.flushOnError ?? true,
     };
     this.audit = new AuditEngine(this.sinks, this.shield);
+    this.ai = new AiTracker(this, this.shield);
   }
 
   public shouldLog(level: LogLevel): boolean {
