@@ -266,7 +266,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     function renderLogs() {
       const filtered = logs.filter(item => {
         if (activeFilter !== 'all') {
-          if (activeFilter === 'audit' && item.type !== 'audit') return false;
+          if (activeFilter === 'audit' && item.type !== 'audit' && !item.action) return false;
           if (activeFilter !== 'audit' && item.level !== activeFilter) return false;
         }
         if (searchQuery) {
@@ -282,9 +282,10 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       }
 
       container.innerHTML = filtered.slice(-200).reverse().map(item => {
-        const isAudit = item.type === 'audit' || item.action;
+        const isAudit = item.type === 'audit' || Boolean(item.action);
         const level = isAudit ? 'audit' : (item.level || 'info');
-        const time = (item.timestamp || new Date().toISOString()).split('T')[1].slice(0, 8);
+        const rawTime = item.timestamp || new Date().toISOString();
+        const time = rawTime.includes('T') ? rawTime.split('T')[1].slice(0, 8) : rawTime.slice(0, 8);
         const user = item.actor?.email || item.actor?.id || item.context?.actor?.email || item.context?.actor?.id;
         const reqId = item.requestId || item.context?.requestId;
 
@@ -309,7 +310,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
             '</div>' +
             '<span class="log-time">' + time + '</span>' +
           '</div>' +
-          '<div class="log-msg">' + (isAudit ? '➔ ' + item.action + ' on ' + JSON.stringify(item.resource) : item.message) + '</div>' +
+          '<div class="log-msg">' + (isAudit ? '➔ ' + item.action + ' on ' + (item.resource?.type ? item.resource.type + ':' + item.resource.id : JSON.stringify(item.resource)) : item.message) + '</div>' +
           detailsHtml +
           errorHtml +
         '</div>';
@@ -317,7 +318,16 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     }
 
     function connectSSE() {
+      const statusDot = document.querySelector('.status-dot');
       const evtSource = new EventSource('/api/stream');
+
+      evtSource.onopen = () => {
+        if (statusDot) {
+          statusDot.style.background = 'var(--success)';
+          statusDot.style.boxShadow = '0 0 8px var(--success)';
+        }
+      };
+
       evtSource.onmessage = (e) => {
         if (isPaused) return;
         try {
@@ -333,9 +343,16 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
             statAudit.textContent = auditCount;
           }
           renderLogs();
-        } catch {}
+        } catch (err) {
+          console.error("Failed to parse incoming log event", err);
+        }
       };
+
       evtSource.onerror = () => {
+        if (statusDot) {
+          statusDot.style.background = 'var(--warn)';
+          statusDot.style.boxShadow = '0 0 8px var(--warn)';
+        }
         setTimeout(connectSSE, 2000);
       };
     }
