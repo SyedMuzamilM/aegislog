@@ -7,7 +7,6 @@ const DEFAULT_SENSITIVE_KEYS = new Set([
   'secret',
   'token',
   'bearer',
-  'auth',
   'authorization',
   'apikey',
   'api_key',
@@ -28,10 +27,8 @@ const DEFAULT_SENSITIVE_KEYS = new Set([
   'social_security',
   'cookie',
   'set-cookie',
-  'session',
-  'sessionid',
-  'session_id',
   'session_token',
+  'session_secret',
   'webhook_secret',
 ]);
 
@@ -69,7 +66,6 @@ export class SecurityShield {
     if (this.sensitiveKeys.has(key.toLowerCase()) || this.sensitiveKeys.has(normalized)) {
       return true;
     }
-    // Check if key contains sensitive substrings
     return (
       normalized.includes('password') ||
       normalized.includes('secret') ||

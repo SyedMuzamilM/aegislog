@@ -1,0 +1,32 @@
+{
+  "name": "@aegislog/next",
+  "version": "0.1.0",
+  "description": "Next.js App Router and Server Actions adapter for AegisLog.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "aegislog": "workspace:*"
+  },
+  "peerDependencies": {
+    "next": ">=13.0.0 || >=14.0.0 || >=15.0.0"
+  },
+  "license": "MIT"
+}

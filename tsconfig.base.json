@@ -18,6 +18,11 @@
     "noImplicitOverride": true,
     "allowUnusedLabels": false,
     "allowUnreachableCode": false,
-    "exactOptionalPropertyTypes": false
+    "exactOptionalPropertyTypes": false,
+    "baseUrl": ".",
+    "paths": {
+      "aegislog": ["./packages/core/src/index.ts"],
+      "@aegislog/*": ["./packages/*/src/index.ts"]
+    }
   }
 }
