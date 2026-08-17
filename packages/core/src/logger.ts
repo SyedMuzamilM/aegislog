@@ -1,6 +1,7 @@
 import { AiTracker } from './ai.js';
 import { AuditEngine } from './audit.js';
 import { getContext } from './context.js';
+import { type LogEventDefinition, validateEventData } from './schema.js';
 import { SecurityShield } from './shield.js';
 import { ConsoleSink } from './sinks.js';
 import {
@@ -151,6 +152,22 @@ export class AegisLogger {
     }
 
     this.emit(this.createEntry('fatal', message, meta, err));
+  }
+
+  public event<TName extends string, TData>(
+    definition: LogEventDefinition<TName, TData>,
+    data: TData,
+    meta?: Record<string, unknown>
+  ): void {
+    const validatedData = validateEventData(definition.schema, data);
+    const level = definition.level ?? 'info';
+    this.emit(
+      this.createEntry(level, `[Event: ${definition.name}]`, {
+        event: definition.name,
+        payload: validatedData as Record<string, unknown>,
+        ...meta,
+      })
+    );
   }
 
   public time(label: string, meta?: Record<string, unknown>): () => number {
