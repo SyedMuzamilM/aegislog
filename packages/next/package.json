@@ -1,6 +1,6 @@
 {
   "name": "@aegislog/next",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Next.js App Router and Server Actions adapter for AegisLog.",
   "homepage": "https://github.com/syedmuzamilm/aegislog#readme",
   "license": "MIT",
