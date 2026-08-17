@@ -1,0 +1,41 @@
+{
+  "name": "aegislog",
+  "version": "0.1.0",
+  "description": "The armored logging, context propagation, and user auditing engine for modern TypeScript.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "logging",
+    "logger",
+    "typescript",
+    "asynclocalstorage",
+    "audit-log",
+    "pii-redaction",
+    "helmet",
+    "opentelemetry",
+    "structured-logging",
+    "edge",
+    "serverless"
+  ],
+  "author": "",
+  "license": "MIT"
+}
