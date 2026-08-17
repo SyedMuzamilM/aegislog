@@ -1,11 +1,17 @@
 import fastify from "fastify";
 import { aegisFastifyPlugin } from "@aegislog/fastify";
-import { audit, defineLogEvent, logger } from "aegislog";
+import { createLogger, defineLogEvent } from "aegislog";
+
+export const logger = createLogger({
+  dev: true, // Automatically streams logs to local Dev Inspector
+});
+export const audit = logger.audit;
 
 const app = fastify({ logger: false });
 
 // Register AegisLog Fastify Plugin
 await app.register(aegisFastifyPlugin, {
+  logger,
   getActor: (req) => {
     const auth = req.headers.authorization;
     return auth ? { id: "usr_fastify_admin", email: "admin@enterprise.io" } : undefined;

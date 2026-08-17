@@ -1,5 +1,12 @@
 import express from "express";
-import { aegisExpressMiddleware, audit, context, logger } from "@aegislog/express";
+import { createLogger } from "aegislog";
+import { aegisExpressMiddleware, context } from "@aegislog/express";
+
+// Create logger that logs to both Terminal (ANSI) and local Dev Inspector (Port 4319)
+export const logger = createLogger({
+  dev: true, // Automatically streams logs to http://127.0.0.1:4319
+});
+export const audit = logger.audit;
 
 const app = express();
 app.use(express.json());
@@ -7,6 +14,7 @@ app.use(express.json());
 // AegisLog Request Middleware: automatically tracks IP, RequestId, Actor, and Response latency
 app.use(
   aegisExpressMiddleware({
+    logger,
     getActor: (req) => {
       const auth = req.headers.authorization;
       if (auth) {

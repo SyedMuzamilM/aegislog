@@ -160,6 +160,11 @@ export interface DevDisplayOptions {
   badges?: Partial<Record<LogLevel, string>>;
 }
 
+export interface DevViewerSinkOptions {
+  port?: number;
+  host?: string;
+}
+
 export interface LoggerOptions {
   level?: LogLevel;
   namespace?: string;
@@ -169,4 +174,5 @@ export interface LoggerOptions {
   ringBuffer?: RingBufferOptions;
   sinks?: LogSink[];
   defaultMeta?: Record<string, unknown>;
+  dev?: boolean | DevViewerSinkOptions;
 }

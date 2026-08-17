@@ -1,6 +1,11 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import { aegisMiddleware, logger } from "@aegislog/hono";
+import { createLogger } from "aegislog";
+import { aegisMiddleware } from "@aegislog/hono";
+
+export const logger = createLogger({
+  dev: true, // Automatically streams logs to local Dev Inspector
+});
 
 const app = new Hono();
 
@@ -8,6 +13,7 @@ const app = new Hono();
 app.use(
   "*",
   aegisMiddleware({
+    logger,
     getActor: (c) => {
       const auth = c.req.header("authorization");
       return auth ? { id: "usr_edge_44", email: "alex@startup.io" } : undefined;

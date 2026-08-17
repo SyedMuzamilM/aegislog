@@ -3,7 +3,7 @@ import { AuditEngine } from "./audit.js";
 import { getContext } from "./context.js";
 import { type LogEventDefinition, validateEventData } from "./schema.js";
 import { SecurityShield } from "./shield.js";
-import { ConsoleSink } from "./sinks.js";
+import { ConsoleSink, DevViewerSink } from "./sinks.js";
 import {
   LOG_LEVEL_SEVERITY,
   type LogEntry,
@@ -28,10 +28,24 @@ export class AegisLogger {
     this.level = options.level ?? "info";
     this.namespace = options.namespace;
     this.shield = new SecurityShield(options.shield);
-    this.sinks =
+
+    const sinks: LogSink[] =
       options.sinks && options.sinks.length > 0
-        ? options.sinks
+        ? [...options.sinks]
         : [new ConsoleSink(options.format, options.display)];
+
+    const shouldAttachDev =
+      options.dev !== false &&
+      (options.dev === true ||
+        typeof options.dev === "object" ||
+        (typeof process !== "undefined" && process.env?.AEGIS_DEV === "true"));
+
+    if (shouldAttachDev) {
+      const devOpts = typeof options.dev === "object" ? options.dev : {};
+      sinks.push(new DevViewerSink(devOpts));
+    }
+
+    this.sinks = sinks;
     this.defaultMeta = options.defaultMeta ?? {};
     this.ringBufferOptions = {
       enabled: options.ringBuffer?.enabled ?? false,
@@ -40,6 +54,12 @@ export class AegisLogger {
     };
     this.audit = new AuditEngine(this.sinks, this.shield);
     this.ai = new AiTracker(this, this.shield);
+  }
+
+  public addSink(sink: LogSink): this {
+    this.sinks.push(sink);
+    this.audit = new AuditEngine(this.sinks, this.shield);
+    return this;
   }
 
   public shouldLog(level: LogLevel): boolean {
