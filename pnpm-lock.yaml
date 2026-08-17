@@ -61,6 +61,12 @@ importers:
         specifier: '>=13.0.0 || >=14.0.0 || >=15.0.0'
         version: 16.3.1(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
 
+  packages/transports:
+    dependencies:
+      aegislog:
+        specifier: workspace:*
+        version: link:../core
+
 packages:
 
   '@babel/code-frame@8.0.0':
