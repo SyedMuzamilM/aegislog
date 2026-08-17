@@ -15,8 +15,14 @@
     "structured-logging",
     "typescript"
   ],
+  "homepage": "https://github.com/syedmuzamilm/aegislog#readme",
   "license": "MIT",
-  "author": "",
+  "author": "Syed Muzamil <syedmuzamilm@users.noreply.github.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/syedmuzamilm/aegislog.git",
+    "directory": "packages/core"
+  },
   "files": [
     "dist",
     "README.md",
@@ -32,6 +38,9 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap",

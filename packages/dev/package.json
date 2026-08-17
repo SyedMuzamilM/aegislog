@@ -2,7 +2,14 @@
   "name": "@aegislog/dev",
   "version": "0.1.0",
   "description": "Local visual dev inspector and real-time dashboard for AegisLog.",
+  "homepage": "https://github.com/syedmuzamilm/aegislog#readme",
   "license": "MIT",
+  "author": "Syed Muzamil <syedmuzamilm@users.noreply.github.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/syedmuzamilm/aegislog.git",
+    "directory": "packages/dev"
+  },
   "bin": {
     "aegislog": "./dist/cli.cjs"
   },
@@ -20,6 +27,9 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsup src/index.ts src/cli.ts --format esm,cjs --dts --clean --sourcemap",

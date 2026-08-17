@@ -14,10 +14,15 @@
     "lint": "vp lint",
     "lint:fix": "vp lint --fix",
     "fmt": "vp fmt --write",
-    "format": "vp fmt --write"
+    "format": "vp fmt --write",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "changeset publish"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@changesets/changelog-github": "^1.0.0",
+    "@changesets/cli": "^3.0.0",
     "@types/node": "^22.13.4",
     "tsdown": "^0.5.9",
     "tsup": "^8.5.1",
