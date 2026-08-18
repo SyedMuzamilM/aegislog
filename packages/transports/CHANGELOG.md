@@ -1,5 +1,11 @@
 # @aegislog/transports
 
+## 0.2.2
+
+### Patch Changes
+
+- **📖 Documentation & NPM Landing Page:** Added dedicated package README and updated usage guides.
+
 ## 0.2.1
 
 ### Patch Changes

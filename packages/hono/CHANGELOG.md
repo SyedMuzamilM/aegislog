@@ -1,5 +1,11 @@
 # @aegislog/hono
 
+## 0.2.2
+
+### Patch Changes
+
+- **📖 Documentation & NPM Landing Page:** Added dedicated package README and edge deployment guides.
+
 ## 0.2.1
 
 ### Patch Changes

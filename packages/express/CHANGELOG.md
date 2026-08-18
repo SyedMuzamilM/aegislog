@@ -1,5 +1,11 @@
 # @aegislog/express
 
+## 0.2.2
+
+### Patch Changes
+
+- **📖 Documentation & NPM Landing Page:** Added dedicated package README and updated options documentation.
+
 ## 0.2.1
 
 ### Patch Changes

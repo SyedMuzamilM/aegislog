@@ -1,5 +1,11 @@
 # @aegislog/dev
 
+## 0.2.2
+
+### Patch Changes
+
+- **📖 Documentation & NPM Landing Page:** Added dedicated package README and CLI documentation.
+
 ## 0.2.1
 
 ### Patch Changes
