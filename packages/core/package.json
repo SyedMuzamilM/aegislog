@@ -1,6 +1,6 @@
 {
   "name": "aegislog",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "The armored logging, context propagation, and user auditing engine for modern TypeScript.",
   "keywords": [
     "asynclocalstorage",

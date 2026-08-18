@@ -1,6 +1,6 @@
 {
   "name": "aegislog-monorepo",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "private": true,
   "description": "The armored logging, context propagation, and user auditing engine for modern TypeScript.",
   "type": "module",

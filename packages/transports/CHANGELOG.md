@@ -1,5 +1,12 @@
 # @aegislog/transports
 
+## 0.2.1
+
+### Patch Changes
+
+- **🍃 Mongoose Model & Query Engine:** Added direct Mongoose `model` support and built-in `.query()` method on `MongoBatchSink`.
+- **⚡ Timer Unref:** Enabled `unref()` on batch flush timers to ensure background timers do not block clean test exits in Vitest/Jest.
+
 ## 0.2.0
 
 ### Minor Changes

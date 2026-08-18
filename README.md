@@ -49,13 +49,13 @@ Executed with `pnpm bench` (Apple Silicon M-Series):
 
 | Package                                         | Version | Description                                                   |
 | :---------------------------------------------- | :------ | :------------------------------------------------------------ |
-| [`aegislog`](./packages/core)                   | `0.2.0` | Core logging, context, shield, audit, and AI tracking engine  |
-| [`@aegislog/next`](./packages/next)             | `0.2.0` | Next.js App Router context wrapper & Server Action loggers    |
-| [`@aegislog/hono`](./packages/hono)             | `0.2.0` | Hono & Cloudflare Workers edge middleware adapter             |
-| [`@aegislog/fastify`](./packages/fastify)       | `0.2.0` | Fastify v4/v5 plugin adapter with global hooks                |
-| [`@aegislog/express`](./packages/express)       | `0.2.0` | Express request/response lifecycle middleware                 |
-| [`@aegislog/transports`](./packages/transports) | `0.2.0` | OpenTelemetry OTLP `/v1/logs`, MongoDB, and Axiom cloud sinks |
-| [`@aegislog/dev`](./packages/dev)               | `0.2.0` | Standalone local visual web dashboard & CLI inspector         |
+| [`aegislog`](./packages/core)                   | `0.2.1` | Core logging, context, shield, audit, and AI tracking engine  |
+| [`@aegislog/next`](./packages/next)             | `0.2.1` | Next.js App Router context wrapper & Server Action loggers    |
+| [`@aegislog/hono`](./packages/hono)             | `0.2.1` | Hono & Cloudflare Workers edge middleware adapter             |
+| [`@aegislog/fastify`](./packages/fastify)       | `0.2.1` | Fastify v4/v5 plugin adapter with global hooks                |
+| [`@aegislog/express`](./packages/express)       | `0.2.1` | Express request/response lifecycle middleware                 |
+| [`@aegislog/transports`](./packages/transports) | `0.2.1` | OpenTelemetry OTLP `/v1/logs`, MongoDB, and Axiom cloud sinks |
+| [`@aegislog/dev`](./packages/dev)               | `0.2.1` | Standalone local visual web dashboard & CLI inspector         |
 
 ---
 

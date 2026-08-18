@@ -1,5 +1,13 @@
 # aegislog
 
+## 0.2.1
+
+### Patch Changes
+
+- **🏥 Built-in Domain Presets (`hipaa`, `pci`, `financial`, `strict`):** Added domain-specific redaction presets to `ShieldOptions`.
+- **🛑 Native Graceful Shutdown:** Added `logger.flush()` and `logger.enableGracefulShutdown()` / `createLogger({ gracefulShutdown: true })`.
+- **🪵 Flexible Error Signatures:** Support for `logger.error(err, meta)` and variadic error argument handling.
+
 ## 0.2.0
 
 ### Minor Changes

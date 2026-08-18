@@ -1,6 +1,6 @@
 {
   "name": "@aegislog/express",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Express middleware adapter for AegisLog.",
   "homepage": "https://github.com/syedmuzamilm/aegislog#readme",
   "license": "MIT",

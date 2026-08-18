@@ -1,6 +1,6 @@
 {
   "name": "@aegislog/transports",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "OpenTelemetry OTLP and batching cloud transports for AegisLog.",
   "homepage": "https://github.com/syedmuzamilm/aegislog#readme",
   "license": "MIT",
