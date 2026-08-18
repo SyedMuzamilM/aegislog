@@ -1,7 +1,14 @@
-import type { Request, Response, NextFunction } from "express";
-import { type ActorContext, type TenantContext, logger, runWithContext } from "aegislog";
+import type { NextFunction, Request, Response } from "express";
+import {
+  type ActorContext,
+  type AegisLogger,
+  type TenantContext,
+  logger,
+  runWithContext,
+} from "aegislog";
 
 export interface ExpressAegisOptions {
+  logger?: AegisLogger;
   getActor?: (req: Request) => ActorContext | undefined | Promise<ActorContext | undefined>;
   getTenant?: (req: Request) => TenantContext | undefined | Promise<TenantContext | undefined>;
   logRequests?: boolean;
@@ -11,6 +18,7 @@ export function aegisExpressMiddleware(
   options: ExpressAegisOptions = {},
 ): (req: Request, res: Response, next: NextFunction) => Promise<void> {
   const logRequests = options.logRequests ?? true;
+  const activeLogger = options.logger ?? logger;
 
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const requestId =
@@ -42,7 +50,7 @@ export function aegisExpressMiddleware(
         const start = performance.now();
 
         if (logRequests) {
-          logger.debug(`--> ${req.method} ${req.originalUrl || req.url}`);
+          activeLogger.debug(`--> ${req.method} ${req.originalUrl || req.url}`);
         }
 
         res.on("finish", () => {
@@ -53,11 +61,11 @@ export function aegisExpressMiddleware(
           const msg = `<-- ${req.method} ${req.originalUrl || req.url} ${status} in ${duration}ms`;
 
           if (level === "error") {
-            logger.error(msg, { status, durationMs: duration });
+            activeLogger.error(msg, { status, durationMs: duration });
           } else if (level === "warn") {
-            logger.warn(msg, { status, durationMs: duration });
+            activeLogger.warn(msg, { status, durationMs: duration });
           } else {
-            logger.info(msg, { status, durationMs: duration });
+            activeLogger.info(msg, { status, durationMs: duration });
           }
         });
 

@@ -219,4 +219,73 @@ describe("AegisLog Core Engine", () => {
       "Patient with [CLINICAL_REDACTED] visited. Details: PATIENT: [MASKED_S]",
     );
   });
+
+  it("supports built-in HIPAA/healthcare and PCI domain presets", () => {
+    const memory = new MemorySink();
+    const logger = createLogger({
+      sinks: [memory],
+      shield: {
+        preset: ["hipaa", "pci"],
+      },
+    });
+
+    logger.info("Clinical update", {
+      mrn: "MRN-123456",
+      conceptionDate: "2026-01-01",
+      gestationalAge: "12w4d",
+      diagnosis: "Normal",
+      patientNotes: "All good",
+      pin: "1234",
+      cvv: "999",
+      body: "Patient with MRN-998811 and SSN: 123-45-6789 attended",
+    });
+
+    expect(memory.entries.length).toBe(1);
+    const meta = memory.entries[0]?.meta as Record<string, unknown>;
+    expect(meta?.mrn).toBe("[REDACTED]");
+    expect(meta?.conceptionDate).toBe("[REDACTED]");
+    expect(meta?.gestationalAge).toBe("[REDACTED]");
+    expect(meta?.diagnosis).toBe("[REDACTED]");
+    expect(meta?.patientNotes).toBe("[REDACTED]");
+    expect(meta?.pin).toBe("[REDACTED]");
+    expect(meta?.cvv).toBe("[REDACTED]");
+    expect(meta?.body).toContain("[REDACTED]");
+    expect(meta?.body).not.toContain("123-45-6789");
+  });
+
+  it("supports logger.flush and gracefulShutdown helper", async () => {
+    let flushed = false;
+    const customSink = {
+      name: "custom-async-sink",
+      log: () => {},
+      flush: async () => {
+        flushed = true;
+      },
+    };
+
+    const logger = createLogger({
+      sinks: [customSink],
+      gracefulShutdown: true,
+    });
+
+    await logger.flush();
+    expect(flushed).toBe(true);
+
+    const cleanup = logger.enableGracefulShutdown();
+    expect(typeof cleanup).toBe("function");
+    cleanup();
+  });
+
+  it("flexibly accepts Error instances as first parameter or in meta", () => {
+    const memory = new MemorySink();
+    const logger = createLogger({ sinks: [memory] });
+
+    const err = new Error("Database timeout");
+    logger.error(err, { query: "SELECT * FROM users" });
+
+    expect(memory.entries.length).toBe(1);
+    expect(memory.entries[0]?.message).toBe("Database timeout");
+    expect(memory.entries[0]?.error?.message).toBe("Database timeout");
+    expect(memory.entries[0]?.meta?.query).toBe("SELECT * FROM users");
+  });
 });

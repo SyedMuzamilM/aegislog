@@ -1,5 +1,14 @@
 # @aegislog/express
 
+## 0.2.0
+
+### Minor Changes
+
+- **✨ Fix Re-Export Symbol Ambiguity:** Removed duplicate re-exports of core symbols (`logger`, `context`, `audit`, `createLogger`) from `@aegislog/express` to avoid TS2308 collisions in consuming applications.
+- **🛡️ Custom Logger Option:** Added `logger?: AegisLogger` to `ExpressAegisOptions` to allow passing custom configured logger instances.
+- Updated dependencies:
+  - aegislog@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes

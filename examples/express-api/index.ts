@@ -1,6 +1,6 @@
 import express from "express";
-import { createLogger } from "aegislog";
-import { aegisExpressMiddleware, context } from "@aegislog/express";
+import { context, createLogger } from "aegislog";
+import { aegisExpressMiddleware } from "@aegislog/express";
 
 // Create logger that logs to both Terminal (ANSI) and local Dev Inspector (Port 4319)
 export const logger = createLogger({

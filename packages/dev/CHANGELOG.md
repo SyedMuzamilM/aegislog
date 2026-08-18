@@ -1,5 +1,12 @@
 # @aegislog/dev
 
+## 0.2.0
+
+### Minor Changes
+
+- Updated dependencies and synchronized with core v0.2.0 release.
+  - aegislog@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes

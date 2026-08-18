@@ -1,6 +1,6 @@
 {
   "name": "@aegislog/dev",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Local visual dev inspector and real-time dashboard for AegisLog.",
   "homepage": "https://github.com/syedmuzamilm/aegislog#readme",
   "license": "MIT",

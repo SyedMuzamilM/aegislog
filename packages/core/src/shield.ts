@@ -1,4 +1,4 @@
-import type { ShieldOptions, ShieldPattern } from "./types.js";
+import type { ShieldOptions, ShieldPattern, ShieldPreset } from "./types.js";
 
 const DEFAULT_SENSITIVE_KEYS = new Set([
   "password",
@@ -32,6 +32,71 @@ const DEFAULT_SENSITIVE_KEYS = new Set([
   "webhook_secret",
 ]);
 
+const PRESET_KEYS: Record<string, string[]> = {
+  hipaa: [
+    "mrn",
+    "medicalrecordnumber",
+    "healthcondition",
+    "diagnosis",
+    "prescription",
+    "patientnotes",
+    "insuranceid",
+    "conceptiondate",
+    "consivedate",
+    "gestationalage",
+    "edd",
+    "estimatedduedate",
+    "ultrasoundprescription",
+    "labresults",
+    "medication",
+    "patientname",
+    "dateofbirth",
+    "dob",
+  ],
+  healthcare: [
+    "mrn",
+    "medicalrecordnumber",
+    "healthcondition",
+    "diagnosis",
+    "prescription",
+    "patientnotes",
+    "insuranceid",
+    "conceptiondate",
+    "consivedate",
+    "gestationalage",
+    "edd",
+    "estimatedduedate",
+    "ultrasoundprescription",
+    "labresults",
+    "medication",
+    "patientname",
+    "dateofbirth",
+    "dob",
+  ],
+  pci: ["cvv", "cvc", "pin", "cardnumber", "expirationdate", "cardholder"],
+  financial: [
+    "accountnumber",
+    "routingnumber",
+    "iban",
+    "swift",
+    "bic",
+    "bankaccount",
+    "taxid",
+    "ein",
+  ],
+};
+
+const PRESET_PATTERNS: Record<string, ShieldPattern[]> = {
+  hipaa: [
+    /\bMRN[-:\s]*[A-Za-z0-9-]{4,}\b/gi,
+    /\b\d{3}-\d{2}-\d{4}\b/g, // SSN pattern
+  ],
+  healthcare: [/\bMRN[-:\s]*[A-Za-z0-9-]{4,}\b/gi, /\b\d{3}-\d{2}-\d{4}\b/g],
+  financial: [
+    /\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b/g, // IBAN
+  ],
+};
+
 const BEARER_REGEX = /Bearer\s+[A-Za-z0-9\-_.]{10,}/gi;
 const JWT_REGEX = /eyJ[a-zA-Z0-9_-]{10,}\.eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]+/g;
 const API_KEY_REGEX = /(sk-[a-zA-Z0-9]{20,}|sk-ant-[a-zA-Z0-9]{20,})/g;
@@ -58,10 +123,37 @@ export class SecurityShield {
     this.maskCreditCards = options.maskCreditCards ?? true;
     this.maskTokens = options.maskTokens ?? true;
     this.maskJwt = options.maskJwt ?? true;
-    this.customPatterns = options.customPatterns ?? [];
+    this.customPatterns = [...(options.customPatterns ?? [])];
     this.customMasker = options.customMasker;
 
     this.sensitiveKeys = new Set(DEFAULT_SENSITIVE_KEYS);
+
+    if (options.preset) {
+      const presets: ShieldPreset[] = Array.isArray(options.preset)
+        ? options.preset
+        : [options.preset];
+
+      for (const preset of presets) {
+        if (preset === "strict") {
+          for (const keys of Object.values(PRESET_KEYS)) {
+            for (const key of keys) this.sensitiveKeys.add(key.toLowerCase());
+          }
+          for (const patterns of Object.values(PRESET_PATTERNS)) {
+            this.customPatterns.push(...patterns);
+          }
+        } else {
+          const keys = PRESET_KEYS[preset];
+          if (keys) {
+            for (const key of keys) this.sensitiveKeys.add(key.toLowerCase());
+          }
+          const patterns = PRESET_PATTERNS[preset];
+          if (patterns) {
+            this.customPatterns.push(...patterns);
+          }
+        }
+      }
+    }
+
     if (options.additionalKeys) {
       for (const key of options.additionalKeys) {
         this.sensitiveKeys.add(key.toLowerCase());

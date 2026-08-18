@@ -49,6 +49,7 @@ export class HttpBatchSink implements LogSink {
       this.timer = setTimeout(() => {
         void this.flush();
       }, this.flushIntervalMs);
+      this.timer?.unref?.();
     }
   }
 

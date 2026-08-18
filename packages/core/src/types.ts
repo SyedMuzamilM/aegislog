@@ -51,8 +51,11 @@ export interface CustomPatternRule {
 
 export type ShieldPattern = RegExp | CustomPatternRule;
 
+export type ShieldPreset = "hipaa" | "healthcare" | "pci" | "financial" | "strict";
+
 export interface ShieldOptions {
   enabled?: boolean;
+  preset?: ShieldPreset | ShieldPreset[];
   maskString?: string;
   additionalKeys?: string[];
   customPatterns?: ShieldPattern[];
@@ -185,4 +188,5 @@ export interface LoggerOptions {
   sinks?: LogSink[];
   defaultMeta?: Record<string, unknown>;
   dev?: boolean | DevViewerSinkOptions;
+  gracefulShutdown?: boolean;
 }

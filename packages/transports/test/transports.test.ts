@@ -133,4 +133,57 @@ describe("AegisLog Transports", () => {
     expect(onErrorSpy.mock.calls[0][0].message).toBe("Mongo connection lost");
     expect(onErrorSpy.mock.calls[0][1][0].message).toBe("DB query timeout");
   });
+
+  it("supports direct Mongoose model and mongoSink.query helper", async () => {
+    const storedDocs = [
+      {
+        message: "Order placed",
+        level: "info",
+        timestamp: "2026-08-18T10:00:00.000Z",
+        context: { actor: { id: "usr_1" }, tenant: { id: "org_1" }, requestId: "req_1" },
+      },
+      {
+        message: "Payment failed",
+        level: "error",
+        timestamp: "2026-08-18T10:05:00.000Z",
+        context: { actor: { id: "usr_1" }, tenant: { id: "org_1" }, requestId: "req_2" },
+      },
+    ];
+
+    const mockMongooseModel = {
+      collection: { name: "systemlogs" },
+      insertMany: vi.fn(async (docs: any[]) => {
+        storedDocs.push(...docs);
+        return docs;
+      }),
+      find: vi.fn(() => ({
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        toArray: vi.fn(async () => storedDocs),
+      })),
+      countDocuments: vi.fn(async () => storedDocs.length),
+    };
+
+    const mongoSink = new MongoBatchSink({
+      model: mockMongooseModel,
+    });
+
+    const logger = createLogger({ sinks: [mongoSink] });
+    logger.info("New event via Mongoose model");
+    await mongoSink.flush();
+
+    expect(mockMongooseModel.insertMany).toHaveBeenCalled();
+
+    // Query helper test
+    const result = await mongoSink.query({
+      actorId: "usr_1",
+      limit: 10,
+    });
+
+    expect(mockMongooseModel.find).toHaveBeenCalled();
+    expect(result.items.length).toBeGreaterThanOrEqual(2);
+    expect(result.total).toBeGreaterThanOrEqual(2);
+    expect(result.page).toBe(1);
+  });
 });

@@ -54,6 +54,36 @@ export class AegisLogger {
     };
     this.audit = new AuditEngine(this.sinks, this.shield);
     this.ai = new AiTracker(this, this.shield);
+
+    if (options.gracefulShutdown) {
+      this.enableGracefulShutdown();
+    }
+  }
+
+  public async flush(): Promise<void> {
+    await Promise.allSettled(this.sinks.map((s) => s.flush?.()));
+  }
+
+  public enableGracefulShutdown(): () => void {
+    if (typeof process === "undefined" || typeof process.on !== "function") {
+      return () => {};
+    }
+
+    const handler = async () => {
+      try {
+        await this.flush();
+      } catch {
+        // Ensure process shutdown is not blocked
+      }
+    };
+
+    process.on("SIGTERM", handler);
+    process.on("SIGINT", handler);
+
+    return () => {
+      process.off?.("SIGTERM", handler);
+      process.off?.("SIGINT", handler);
+    };
   }
 
   public addSink(sink: LogSink): this {
@@ -147,19 +177,29 @@ export class AegisLogger {
   }
 
   public error(
-    message: string,
+    messageOrError: string | Error,
     metaOrError?: Record<string, unknown> | Error,
     error?: Error,
   ): void {
+    let message: string;
     let meta: Record<string, unknown> | undefined;
     let err: Error | undefined = error;
 
-    if (metaOrError instanceof Error) {
-      err = metaOrError;
-    } else if (metaOrError && typeof metaOrError === "object") {
-      meta = metaOrError;
-      if ("error" in meta && meta.error instanceof Error) {
-        err = meta.error;
+    if (messageOrError instanceof Error) {
+      message = messageOrError.message;
+      err = messageOrError;
+      if (metaOrError && !(metaOrError instanceof Error) && typeof metaOrError === "object") {
+        meta = metaOrError;
+      }
+    } else {
+      message = String(messageOrError);
+      if (metaOrError instanceof Error) {
+        err = metaOrError;
+      } else if (metaOrError && typeof metaOrError === "object") {
+        meta = metaOrError;
+        if ("error" in meta && meta.error instanceof Error) {
+          err = meta.error;
+        }
       }
     }
 
@@ -167,19 +207,29 @@ export class AegisLogger {
   }
 
   public fatal(
-    message: string,
+    messageOrError: string | Error,
     metaOrError?: Record<string, unknown> | Error,
     error?: Error,
   ): void {
+    let message: string;
     let meta: Record<string, unknown> | undefined;
     let err: Error | undefined = error;
 
-    if (metaOrError instanceof Error) {
-      err = metaOrError;
-    } else if (metaOrError && typeof metaOrError === "object") {
-      meta = metaOrError;
-      if ("error" in meta && meta.error instanceof Error) {
-        err = meta.error;
+    if (messageOrError instanceof Error) {
+      message = messageOrError.message;
+      err = messageOrError;
+      if (metaOrError && !(metaOrError instanceof Error) && typeof metaOrError === "object") {
+        meta = metaOrError;
+      }
+    } else {
+      message = String(messageOrError);
+      if (metaOrError instanceof Error) {
+        err = metaOrError;
+      } else if (metaOrError && typeof metaOrError === "object") {
+        meta = metaOrError;
+        if ("error" in meta && meta.error instanceof Error) {
+          err = meta.error;
+        }
       }
     }
 
