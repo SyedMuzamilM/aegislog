@@ -1,5 +1,13 @@
 # @aegislog/transports
 
+## 0.2.0
+
+### Minor Changes
+
+- **🍃 MongoDB Batched Transport (`MongoBatchSink`):** High-throughput buffer queue that flushes application logs and business audit records to MongoDB using non-blocking `insertMany({ ordered: false })`.
+- **🛡️ Audit Collection Routing:** Support for dedicated `auditCollection` routing or fallback to unified log storage.
+- **⚡ Resilient Delivery:** Configurable batch size, periodic interval flushes, custom transformations, and graceful error handling via `onError`.
+
 ## 0.1.1
 
 ### Patch Changes

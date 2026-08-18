@@ -1,5 +1,12 @@
 # aegislog
 
+## 0.2.0
+
+### Minor Changes
+
+- **🛡️ Custom Pattern & Domain Redaction Rules:** Added first-class support for `customPatterns` in `ShieldOptions` and `SecurityShield`. Supports both raw `RegExp` patterns and `{ pattern: RegExp, replacer: string | Function }` rules for custom domain PII/PHI redaction.
+- **⚙️ Redaction Toggles:** Added full support for `maskCreditCards`, `maskTokens`, and `maskJwt` granular toggle options in `ShieldOptions`.
+
 ## 0.1.1
 
 ### Patch Changes
