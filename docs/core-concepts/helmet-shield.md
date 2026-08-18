@@ -29,9 +29,41 @@ By default, the Helmet Shield automatically scans and sanitizes:
 
 ---
 
-## ⚙️ Customizing Shield Options
+## 🏥 Built-in Domain Presets
 
-You can configure custom masking behavior, domain-specific dictionaries, and regex rules when initializing your logger:
+AegisLog includes pre-built domain-specific compliance dictionaries and patterns via the `preset` option:
+
+| Preset                         | Target Industry / Compliance         | Auto-Redacted Fields & Patterns                                                                                                                                                                                                                        |
+| :----------------------------- | :----------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`"hipaa"` / `"healthcare"`** | Healthcare & Maternal Health (HIPAA) | Medical Record Numbers (`mrn`, `medicalrecordnumber`), diagnoses, prescriptions, patient notes, insurance IDs, obstetric fields (`conceptiondate`, `consivedate`, `gestationalage`, `edd`, `ultrasoundprescription`), DOB, and MRN/SSN regex patterns. |
+| **`"pci"`**                    | Payment Cards & Banking (PCI-DSS)    | Primary account numbers (PAN), `cvv`, `cvc`, `pin`, `cardnumber`, expiration dates, and cardholder names.                                                                                                                                              |
+| **`"financial"`**              | FinTech & Banking Compliance         | Bank account numbers, `routingnumber`, `iban`, `swift`, `bic`, `taxid`, `ein`, and IBAN regex patterns.                                                                                                                                                |
+| **`"strict"`**                 | High-Security Environments           | Activates **all** presets simultaneously (HIPAA + PCI + Financial + Default credentials).                                                                                                                                                              |
+
+### Example: Activating Healthcare & PCI Presets
+
+```typescript
+import { createLogger } from "aegislog";
+
+export const logger = createLogger({
+  shield: {
+    preset: ["hipaa", "pci"], // Activate multiple presets simultaneously
+    maskString: "[PROTECTED_HEALTH_INFO]",
+  },
+});
+
+logger.info("Patient check-in", {
+  patientNotes: "Routine prenatal checkup", // -> "[PROTECTED_HEALTH_INFO]"
+  conceptionDate: "2026-02-14", // -> "[PROTECTED_HEALTH_INFO]"
+  notes: "Patient with MRN-889900 visited", // -> "Patient with [PROTECTED_HEALTH_INFO] visited"
+});
+```
+
+---
+
+## ⚙️ Customizing Shield Options & Regex Rules
+
+You can combine presets with custom dictionary keys, regex pattern rules, and custom masker functions:
 
 ```typescript
 import { createLogger } from "aegislog";
@@ -39,14 +71,9 @@ import { createLogger } from "aegislog";
 const logger = createLogger({
   shield: {
     enabled: true,
+    preset: "hipaa",
     maskString: "[CONFIDENTIAL]",
-    additionalKeys: [
-      "stripeCustomerId",
-      "encryptionSalt",
-      "taxIdentifier",
-      "consiveDate",
-      "ultrasoundPrescription",
-    ],
+    additionalKeys: ["stripeCustomerId", "encryptionSalt", "taxIdentifier"],
     customPatterns: [
       // Direct regex pattern redaction
       /MRN-\d{6}/g,

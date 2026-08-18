@@ -14,20 +14,28 @@ pnpm add @aegislog/transports aegislog
 
 ## Quickstart
 
-### MongoDB Batched Sink
+### MongoDB Batched Sink & Query Engine
 
 ```typescript
 import { createLogger } from "aegislog";
 import { MongoBatchSink } from "@aegislog/transports";
 
 const mongoSink = new MongoBatchSink({
-  collection: db.collection("system_logs"),
+  model: SystemLogsModel, // Direct Mongoose model or db.collection("system_logs")
   batchSize: 100,
   flushIntervalMs: 2000,
 });
 
 const logger = createLogger({
   sinks: [mongoSink],
+  gracefulShutdown: true, // Auto-flushes on SIGTERM
+});
+
+// Query historical logs
+const { items, total } = await mongoSink.query({
+  level: "error",
+  actorId: "usr_123",
+  limit: 20,
 });
 ```
 

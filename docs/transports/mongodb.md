@@ -43,39 +43,71 @@ logger.info("Patient appointment scheduled", { appointmentId: "apt_123" });
 
 ---
 
-## 🛡️ Usage with Mongoose
+## 🛡️ Usage with Mongoose (Direct Model Support)
+
+You can pass a Mongoose Model directly via the `model` and `auditModel` options without manual collection unwrapping:
 
 ```typescript
 import mongoose from "mongoose";
 import { createLogger } from "aegislog";
 import { MongoBatchSink } from "@aegislog/transports";
 
-const LogModel = mongoose.model(
+const SystemLogsModel = mongoose.model(
   "SystemLog",
   new mongoose.Schema({}, { strict: false, timestamps: false }),
 );
 
+const AuditLogsModel = mongoose.model(
+  "AuditLog",
+  new mongoose.Schema({}, { strict: false, timestamps: false }),
+);
+
 const mongoSink = new MongoBatchSink({
-  collection: LogModel.collection,
+  model: SystemLogsModel,
+  auditModel: AuditLogsModel, // Direct Mongoose Model
   batchSize: 100,
   flushIntervalMs: 2000,
 });
 
 const logger = createLogger({
   sinks: [mongoSink],
+  gracefulShutdown: true, // Auto-flushes on SIGTERM/SIGINT
 });
 ```
 
 ---
 
-## ⚡ Graceful Shutdown
+## 🔍 Historical Log Query API (`mongoSink.query`)
 
-To ensure in-flight buffered logs are written during server shutdown:
+The `MongoBatchSink` includes a built-in `.query()` helper designed for admin portals and audit dashboards:
 
 ```typescript
-process.on("SIGTERM", async () => {
-  await mongoSink.flush();
-  await client.close();
-  process.exit(0);
+const { items, total, page, pageSize, totalPages } = await mongoSink.query({
+  level: "error",
+  actorId: "usr_sarah",
+  tenantId: "org_acme",
+  search: "payment failed",
+  startDate: "2026-08-01",
+  endDate: "2026-08-18",
+  limit: 25,
+  page: 1,
 });
+
+console.log(`Found ${total} logs matching query:`, items);
+```
+
+---
+
+## ⚡ Built-in Graceful Shutdown
+
+AegisLog can automatically drain and flush all in-flight buffers during `SIGTERM` and `SIGINT`:
+
+```typescript
+const logger = createLogger({
+  sinks: [mongoSink],
+  gracefulShutdown: true, // Enables automatic process shutdown hooks
+});
+
+// Or manually:
+await logger.flush();
 ```
