@@ -31,7 +31,7 @@ By default, the Helmet Shield automatically scans and sanitizes:
 
 ## ⚙️ Customizing Shield Options
 
-You can configure custom masking behavior when initializing your logger:
+You can configure custom masking behavior, domain-specific dictionaries, and regex rules when initializing your logger:
 
 ```typescript
 import { createLogger } from "aegislog";
@@ -40,7 +40,22 @@ const logger = createLogger({
   shield: {
     enabled: true,
     maskString: "[CONFIDENTIAL]",
-    additionalKeys: ["stripeCustomerId", "encryptionSalt", "taxIdentifier"],
+    additionalKeys: [
+      "stripeCustomerId",
+      "encryptionSalt",
+      "taxIdentifier",
+      "consiveDate",
+      "ultrasoundPrescription",
+    ],
+    customPatterns: [
+      // Direct regex pattern redaction
+      /MRN-\d{6}/g,
+      // Regex rule with custom replacer function
+      {
+        pattern: /PATIENT:\s*([A-Z]+)/g,
+        replacer: (_match, name) => `PATIENT: [MASKED_${name[0]}]`,
+      },
+    ],
     maskCreditCards: true,
     maskTokens: true,
     maskJwt: true,

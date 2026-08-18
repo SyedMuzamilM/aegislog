@@ -187,4 +187,36 @@ describe("AegisLog Core Engine", () => {
     expect(customBadge).toContain("[CUSTOM_INFO]");
     expect(customBadge).not.toContain("ℹ️");
   });
+
+  it("supports domain-specific redaction via additionalKeys and customPatterns", () => {
+    const memory = new MemorySink();
+    const logger = createLogger({
+      sinks: [memory],
+      shield: {
+        maskString: "[CLINICAL_REDACTED]",
+        additionalKeys: ["consiveDate", "ultrasoundPrescription"],
+        customPatterns: [
+          /MRN-\d{6}/g,
+          {
+            pattern: /PATIENT:\s*([A-Z]+)/g,
+            replacer: (_match, name) => `PATIENT: [MASKED_${name[0]}]`,
+          },
+        ],
+      },
+    });
+
+    logger.info("Patient record updated", {
+      consiveDate: "2026-05-12",
+      ultrasoundPrescription: "Routine checkup",
+      notes: "Patient with MRN-882910 visited. Details: PATIENT: SMITH",
+    });
+
+    expect(memory.entries.length).toBe(1);
+    const meta = memory.entries[0]?.meta as Record<string, unknown>;
+    expect(meta?.consiveDate).toBe("[CLINICAL_REDACTED]");
+    expect(meta?.ultrasoundPrescription).toBe("[CLINICAL_REDACTED]");
+    expect(meta?.notes).toBe(
+      "Patient with [CLINICAL_REDACTED] visited. Details: PATIENT: [MASKED_S]",
+    );
+  });
 });

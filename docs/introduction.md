@@ -62,5 +62,5 @@ AegisLog is structured as an ecosystem of lightweight, modular packages:
 - [`@aegislog/hono`](file:///Users/syedmuzamilm/work/opensource/aegislog/packages/hono): Hono & Cloudflare Workers edge middleware adapter.
 - [`@aegislog/fastify`](file:///Users/syedmuzamilm/work/opensource/aegislog/packages/fastify): Fastify plugin with global request correlation hooks.
 - [`@aegislog/express`](file:///Users/syedmuzamilm/work/opensource/aegislog/packages/express): Express request/response lifecycle middleware.
-- [`@aegislog/transports`](file:///Users/syedmuzamilm/work/opensource/aegislog/packages/transports): Native OpenTelemetry OTLP `/v1/logs` and batching HTTP cloud sinks.
+- [`@aegislog/transports`](file:///Users/syedmuzamilm/work/opensource/aegislog/packages/transports): Native OpenTelemetry OTLP `/v1/logs`, MongoDB, and batching HTTP cloud sinks.
 - [`@aegislog/dev`](file:///Users/syedmuzamilm/work/opensource/aegislog/packages/dev): Local visual web inspector dashboard (`npx aegislog dev`).

@@ -1,4 +1,4 @@
-import type { ShieldOptions } from "./types.js";
+import type { ShieldOptions, ShieldPattern } from "./types.js";
 
 const DEFAULT_SENSITIVE_KEYS = new Set([
   "password",
@@ -44,6 +44,10 @@ export class SecurityShield {
   private maxDepth: number;
   private maxStringLength: number;
   private enabled: boolean;
+  private maskCreditCards: boolean;
+  private maskTokens: boolean;
+  private maskJwt: boolean;
+  private customPatterns: ShieldPattern[];
   private customMasker?: (key: string, value: unknown) => unknown;
 
   constructor(options: ShieldOptions = {}) {
@@ -51,6 +55,10 @@ export class SecurityShield {
     this.maskString = options.maskString ?? "[REDACTED]";
     this.maxDepth = options.maxDepth ?? 6;
     this.maxStringLength = options.maxStringLength ?? 10000;
+    this.maskCreditCards = options.maskCreditCards ?? true;
+    this.maskTokens = options.maskTokens ?? true;
+    this.maskJwt = options.maskJwt ?? true;
+    this.customPatterns = options.customPatterns ?? [];
     this.customMasker = options.customMasker;
 
     this.sensitiveKeys = new Set(DEFAULT_SENSITIVE_KEYS);
@@ -82,14 +90,37 @@ export class SecurityShield {
       result = `${result.slice(0, this.maxStringLength)}... [TRUNCATED]`;
     }
 
-    result = result.replace(BEARER_REGEX, "Bearer [REDACTED_TOKEN]");
-    result = result.replace(JWT_REGEX, "[REDACTED_JWT]");
-    result = result.replace(API_KEY_REGEX, "sk-[REDACTED_KEY]");
-    result = result.replace(AWS_KEY_REGEX, "AKIA[REDACTED_KEY]");
-    result = result.replace(CREDIT_CARD_REGEX, (match) => {
-      const cleaned = match.replace(/[-\s]/g, "");
-      return `****-****-****-${cleaned.slice(-4)}`;
-    });
+    if (this.maskTokens) {
+      result = result.replace(BEARER_REGEX, "Bearer [REDACTED_TOKEN]");
+      result = result.replace(API_KEY_REGEX, "sk-[REDACTED_KEY]");
+      result = result.replace(AWS_KEY_REGEX, "AKIA[REDACTED_KEY]");
+    }
+
+    if (this.maskJwt) {
+      result = result.replace(JWT_REGEX, "[REDACTED_JWT]");
+    }
+
+    if (this.maskCreditCards) {
+      result = result.replace(CREDIT_CARD_REGEX, (match) => {
+        const cleaned = match.replace(/[-\s]/g, "");
+        return `****-****-****-${cleaned.slice(-4)}`;
+      });
+    }
+
+    if (this.customPatterns.length > 0) {
+      for (const item of this.customPatterns) {
+        if (item instanceof RegExp) {
+          result = result.replace(item, this.maskString);
+        } else if (item && typeof item === "object" && item.pattern instanceof RegExp) {
+          const replacer = item.replacer ?? this.maskString;
+          if (typeof replacer === "function") {
+            result = result.replace(item.pattern, replacer as any);
+          } else {
+            result = result.replace(item.pattern, replacer);
+          }
+        }
+      }
+    }
 
     return result;
   }

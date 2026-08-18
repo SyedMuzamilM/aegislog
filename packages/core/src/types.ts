@@ -42,10 +42,20 @@ export interface AegisContext {
   data?: Record<string, unknown>;
 }
 
+export type ShieldPatternReplacer = string | ((substring: string, ...args: unknown[]) => string);
+
+export interface CustomPatternRule {
+  pattern: RegExp;
+  replacer?: ShieldPatternReplacer;
+}
+
+export type ShieldPattern = RegExp | CustomPatternRule;
+
 export interface ShieldOptions {
   enabled?: boolean;
   maskString?: string;
   additionalKeys?: string[];
+  customPatterns?: ShieldPattern[];
   maskCreditCards?: boolean;
   maskTokens?: boolean;
   maskJwt?: boolean;
