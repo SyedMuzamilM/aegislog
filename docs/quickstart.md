@@ -88,7 +88,7 @@ async function performDeepOperation() {
 
 ## 5. Business Compliance Audit Trail
 
-Record immutable compliance audit events for SOC2, HIPAA, or ISO27001 requirements:
+Record structured compliance audit events for SOC2, HIPAA, or ISO27001 requirements. Use an append-only sink when immutable retention is required:
 
 ```typescript
 import { audit } from "aegislog";
@@ -133,4 +133,4 @@ Start the local visual dashboard in your terminal:
 npx @aegislog/dev --port 4319
 ```
 
-Open `http://localhost:4319` in your browser to view incoming logs in real-time with filters, syntax-colored JSON trees, and search!
+Open `http://localhost:4319` in your browser to view incoming logs in real time with level filters, escaped JSON details, and search.

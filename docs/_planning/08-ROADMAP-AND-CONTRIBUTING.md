@@ -38,31 +38,32 @@ aegislog/
 
 ### Phase 1: Core Engine & Security Shield (v0.1.0)
 
-- [ ] Core `AegisLogger` class with log levels (`debug`, `info`, `warn`, `error`, `fatal`).
-- [ ] Ambient context runner using native `AsyncLocalStorage`.
-- [ ] Built-in **Helmet Security Shield** (case-insensitive dictionary + regex token masking).
-- [ ] Circular-safe, allocation-efficient serializer.
-- [ ] Beautiful zero-config Dev Console Formatter (TUI badges, highlight stacks).
-- [ ] High-throughput Production JSON Formatter.
+- [x] Core `AegisLogger` class with log levels (`trace`, `debug`, `info`, `warn`, `error`, `fatal`).
+- [x] Ambient context runner using native `AsyncLocalStorage`.
+- [x] Built-in **Helmet Security Shield** (case-insensitive dictionary + regex token masking).
+- [x] Circular-safe, depth-capped serializer.
+- [x] Zero-config Dev Console Formatter (TUI badges, highlighted stacks).
+- [x] Production JSON Formatter.
 
 ### Phase 2: Framework Adapters (v0.2.0)
 
-- [ ] `@aegislog/hono` middleware (Cloudflare Workers, Bun, Deno).
-- [ ] `@aegislog/next` context wrappers for Server Actions and Route Handlers.
-- [ ] `@aegislog/express` and `@aegislog/fastify` HTTP request logging middleware.
+- [x] `@aegislog/hono` middleware (Cloudflare Workers with `nodejs_compat`, Bun, Deno).
+- [x] `@aegislog/next` context wrappers for Server Actions and Route Handlers.
+- [x] `@aegislog/express` and `@aegislog/fastify` HTTP request logging middleware.
 
 ### Phase 3: Audit Engine & Schema Validation (v0.3.0)
 
-- [ ] `@aegislog/audit` module for immutable business event logs.
-- [ ] Type-safe event definitions with Zod & Valibot schema validation.
+- [x] Core `audit.record()` engine for structured business event logs.
+- [x] Type-safe event definitions with Standard Schema, Zod, and Valibot validation.
 - [ ] S3 and PostgreSQL audit sinks.
 
 ### Phase 4: Cloud Transports & Observability (v0.4.0)
 
-- [ ] OpenTelemetry OTLP trace and span correlation sink.
-- [ ] Direct batching cloud sinks for Axiom, BetterStack, and Datadog.
+- [x] OpenTelemetry OTLP trace and span correlation sink.
+- [x] Batched Axiom and generic HTTP sinks.
+- [ ] Dedicated BetterStack and Datadog sink presets.
 - [ ] Edge `waitUntil` lifecycle flush handlers.
 
 ### Phase 5: Interactive Dev Viewer / TUI (v1.0.0)
 
-- [ ] Optional local developer dashboard (inspired by `oplogs`) for real-time visual log stream inspection, user session timeline filtering, and payload inspection.
+- [x] Optional local developer dashboard for real-time visual log streaming, level/audit filtering, search, and payload inspection.

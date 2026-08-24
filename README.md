@@ -20,15 +20,15 @@
 
 ## 🌟 Highlights
 
-- 🛡️ **Helmet Security Shield:** Zero-leak auto-redaction for passwords, Bearer tokens, JWTs, OpenAI/AWS keys, credit cards, and domain compliance presets (`hipaa`, `pci`, `financial`, `strict`) at sub-microsecond speed.
+- 🛡️ **Helmet Security Shield:** Built-in redaction for passwords, Bearer tokens, JWTs, OpenAI/AWS keys, credit cards, and domain compliance presets (`hipaa`, `pci`, `financial`, `strict`) at roughly 1.6 µs per complex payload in the included benchmark.
 - 🌐 **Ambient Context Engine:** Zero parameter drilling. Automatically attaches `actor` (user), `tenant` (org), and `requestId` across asynchronous call stacks via `AsyncLocalStorage`.
-- 📜 **Business Audit Trails:** First-class `audit.record()` engine for immutable SOC2/HIPAA/GDPR compliance events separate from ephemeral debug noise.
+- 📜 **Business Audit Trails:** First-class `audit.record()` engine for structured SOC2/HIPAA/GDPR events separate from ephemeral debug noise. Pair it with append-only storage when immutable retention is required.
 - 🍃 **Cloud & DB Transports:** Native OpenTelemetry OTLP `/v1/logs`, high-throughput batched MongoDB / Mongoose transport with historical query API (`mongoSink.query`), and Axiom sinks.
 - 🛑 **Native Graceful Shutdown:** Automated buffer draining on `SIGTERM` and `SIGINT` via `gracefulShutdown: true`.
 - 🎨 **Customizable Console Display:** Syntax-colored JSON metadata, clean error stack traces, and configurable presets (`default`, `minimal`, `compact`, `detailed`).
 - 🤖 **AI / LLM Observability:** Built-in `ai.track()` measuring prompts, completions, tokens, latency, and estimated USD cost (GPT-4o, Claude 3.5, Gemini 2.0, DeepSeek R1).
 - 📐 **Type-Safe Event Schemas:** Native support for Standard Schema v1, Zod, and Valibot event definitions.
-- ⚡ **Zero-Pipe Edge Universal:** No Unix pipes (`| pino-pretty`) or `worker_threads` required. Runs identically on Node.js, Cloudflare Workers, Next.js, Fastify, Express, Bun, and Deno.
+- ⚡ **Zero-Pipe Runtime Support:** No Unix pipes (`| pino-pretty`) or `worker_threads` required. Supports Node.js, Bun, Deno's Node compatibility layer, and Cloudflare Workers with `nodejs_compat` enabled.
 - 🖥️ **Localhost Dev Inspector:** Realtime visual dashboard & CLI (`npx @aegislog/dev --port 4319`).
 
 ---

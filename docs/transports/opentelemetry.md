@@ -47,7 +47,7 @@ import { AxiomSink, HttpBatchSink } from "@aegislog/transports";
 import { createLogger } from "aegislog";
 
 const axiomSink = new AxiomSink({
-  apiToken: process.env.AXIOM_TOKEN!,
+  token: process.env.AXIOM_TOKEN!,
   dataset: "production-logs",
 });
 

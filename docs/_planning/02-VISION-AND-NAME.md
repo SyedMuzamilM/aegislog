@@ -13,7 +13,7 @@ Our mission is to create **the definitive TypeScript logging and auditing framew
 - **Protected by Default:** Safe serialization and active PII shielding ("Helmet for your logs").
 - **Aware of Context:** Effortlessly tracks the user, tenant, and request through asynchronous tasks.
 - **Joyful Developer Experience:** Instantly human-readable in development, ultra-fast OpenTelemetry JSON in production.
-- **Universal:** Seamless in Node.js, Bun, Deno, Next.js, and Cloudflare Workers.
+- **Portable across Node-compatible runtimes:** Supports Node.js, Bun, Deno's Node compatibility layer, Next.js Node runtimes, and Cloudflare Workers with `nodejs_compat`.
 
 ---
 
@@ -77,11 +77,11 @@ We evaluated several naming options based on memorability, domain availability, 
  ┌────────────────────────────────────────────────────────────────────────┐
  │                              AEGISLOG                                  │
  ├────────────────────────────────────────────────────────────────────────┤
- │  🛡️ Zero-Leak Sanitizer     │ Auto-redacts auth, tokens, PII, keys    │
+ │  🛡️ Built-in Sanitizer      │ Auto-redacts auth, tokens, PII, keys    │
  │  👤 Ambient User Context    │ AsyncLocalStorage actor & tenant store   │
  │  📋 SOC2-Ready Audit Engine │ Differentiated business audit logging    │
  │  🎨 Dev/Prod Dual Engine    │ Zero-pipe terminal TUI + Raw JSON stream │
- │  ⚡ Universal Edge Runtime   │ Cloudflare Workers, Vercel, Bun, Node    │
+ │  ⚡ Node-Compatible Runtime  │ Cloudflare Workers, Deno, Bun, Node      │
  │  📐 Typed Event Schemas     │ Zod / Valibot schema verification        │
  └────────────────────────────────────────────────────────────────────────┘
 ```

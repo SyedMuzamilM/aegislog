@@ -1,6 +1,6 @@
 # @aegislog/hono 🔥
 
-Hono and Cloudflare Workers edge middleware adapter for [AegisLog](https://github.com/syedmuzamilm/aegislog). Runs with zero external dependencies across Cloudflare Workers, Fastly Compute, Node.js, Deno, and Bun.
+Hono middleware adapter for [AegisLog](https://github.com/syedmuzamilm/aegislog). It supports Node.js, Bun, Deno's Node compatibility layer, and Cloudflare Workers with the `nodejs_compat` compatibility flag enabled for `AsyncLocalStorage`.
 
 ---
 

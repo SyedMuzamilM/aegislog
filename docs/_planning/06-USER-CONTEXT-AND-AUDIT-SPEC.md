@@ -68,7 +68,7 @@ logger.debug("Cache lookup performed", { key: "cache:user:123", hit: true });
 ```typescript
 import { audit } from "aegislog";
 
-// Record an immutable business action
+// Record a structured business action. The sink controls storage immutability.
 await audit.record({
   action: "document.permissions_updated",
   resource: {
@@ -90,6 +90,9 @@ await audit.record({
 ## 4. Automatic Audit Log Pipeline & Sinks
 
 AegisLog allows routing audit logs to dedicated secure sinks (such as S3, Postgres, or dedicated compliance webhooks) separate from debug logs:
+
+> [!NOTE]
+> The S3 and PostgreSQL sink classes below describe a planned API. They are not included in v0.2.x. Current applications can implement `LogSink.logAudit` or use `MongoBatchSink`.
 
 ```typescript
 import { configureAudit, S3AuditSink, PostgresAuditSink } from "aegislog/audit";

@@ -25,7 +25,8 @@ logger.error("Failed to charge payment", { invoiceId: "inv_123", amount: 49.99 }
 
 ```typescript
 import { Hono } from "hono";
-import { aegisMiddleware, logger } from "aegislog/hono";
+import { aegisMiddleware } from "@aegislog/hono";
+import { logger } from "aegislog";
 
 const app = new Hono();
 
@@ -45,7 +46,8 @@ app.get("/api/profile", async (c) => {
 // app/actions/update-billing.ts
 "use server";
 
-import { withAegisContext, logger } from "aegislog/next";
+import { withAegisContext } from "@aegislog/next";
+import { logger } from "aegislog";
 import { getAuthUser } from "@/lib/auth";
 
 export async function updateBillingAction(planId: string) {
@@ -66,7 +68,8 @@ export async function updateBillingAction(planId: string) {
 
 ```typescript
 import express from "express";
-import { aegisExpressMiddleware, logger } from "aegislog/express";
+import { aegisExpressMiddleware } from "@aegislog/express";
+import { logger } from "aegislog";
 
 const app = express();
 app.use(

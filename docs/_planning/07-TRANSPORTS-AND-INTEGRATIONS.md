@@ -43,7 +43,7 @@ Seamlessly forwards structured logs and correlates with active OpenTelemetry dis
 
 ```typescript
 import { createLogger } from "aegislog";
-import { OpenTelemetrySink } from "aegislog/transports/otel";
+import { OpenTelemetrySink } from "@aegislog/transports";
 
 export const logger = createLogger({
   sinks: [
@@ -59,8 +59,7 @@ export const logger = createLogger({
 ### 3.2 Axiom / BetterStack / Datadog Sinks
 
 ```typescript
-import { AxiomSink } from "aegislog/transports/axiom";
-import { BetterStackSink } from "aegislog/transports/betterstack";
+import { AxiomSink } from "@aegislog/transports";
 
 export const logger = createLogger({
   sinks: [
@@ -82,7 +81,8 @@ In serverless environments (like Cloudflare Workers or Next.js Edge), asynchrono
 
 ```typescript
 import { Hono } from "hono";
-import { aegisMiddleware, flushLogs } from "aegislog/hono";
+import { aegisMiddleware } from "@aegislog/hono";
+import { logger } from "aegislog";
 
 const app = new Hono();
 
@@ -92,7 +92,7 @@ app.get("/task", async (c) => {
   logger.info("Performing background processing");
 
   // Ensures all buffered logs are dispatched before isolate shutdown
-  c.executionCtx.waitUntil(flushLogs());
+  c.executionCtx.waitUntil(logger.flush());
 
   return c.text("Processing started");
 });

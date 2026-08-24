@@ -1,6 +1,6 @@
 # Hono & Cloudflare Workers Integration 🔥
 
-The `@aegislog/hono` package brings full AegisLog capabilities to edge runtimes (Cloudflare Workers, Fastly, Bun, Deno, and Node.js) with 0 external dependencies.
+The `@aegislog/hono` package connects Hono request lifecycles to AegisLog on Node.js-compatible runtimes. Cloudflare Workers must enable the `nodejs_compat` compatibility flag because ambient context uses `node:async_hooks`.
 
 ---
 
@@ -8,6 +8,14 @@ The `@aegislog/hono` package brings full AegisLog capabilities to edge runtimes 
 
 ```bash
 pnpm add @aegislog/hono aegislog
+```
+
+For Cloudflare Workers, add the compatibility flag to `wrangler.jsonc`:
+
+```jsonc
+{
+  "compatibility_flags": ["nodejs_compat"],
+}
 ```
 
 ---

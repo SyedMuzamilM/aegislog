@@ -11,7 +11,7 @@ In traditional Node.js/TypeScript code, if you want a function 5 levels deep in 
 
 **Both approaches create massive boilerplate and pollute clean architecture.**
 
-AegisLog solves this using **`AsyncLocalStorage`** (part of the ECMAScript standard & supported in Node.js, Bun, Deno, and Cloudflare Workers).
+AegisLog solves this using **`AsyncLocalStorage`** from `node:async_hooks`. Node.js and Bun support it directly, Deno needs Node compatibility, and Cloudflare Workers need the `nodejs_compat` flag.
 
 ---
 
@@ -53,7 +53,8 @@ When the request already has a session cookie or Bearer token, the middleware po
 ```typescript
 // hono-app.ts
 import { Hono } from "hono";
-import { aegisMiddleware, logger } from "aegislog/hono";
+import { aegisMiddleware } from "@aegislog/hono";
+import { logger } from "aegislog";
 
 const app = new Hono();
 
@@ -174,7 +175,7 @@ export async function updatePayoutBank(newIban: string) {
 }
 ```
 
-### The Generated Immutable Audit Record:
+### The Generated Audit Record:
 
 ```json
 {

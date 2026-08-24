@@ -53,7 +53,7 @@ const response = await logger.ai.track({
 // - Prompt & Completion (with automatic PII masking)
 // - Prompt tokens, Completion tokens, Total tokens
 // - Estimated USD cost based on model pricing table
-// - Latency (time-to-first-token & total duration)
+// - Total call duration
 ```
 
 ---

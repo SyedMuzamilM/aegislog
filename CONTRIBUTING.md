@@ -48,7 +48,7 @@ Thank you for your interest in contributing to AegisLog! We are building the nex
 
 - **0 External Runtime Dependencies for `@aegislog/core`:** The core engine must remain pure and free from heavy production dependencies.
 - **Strict TypeScript:** Use strict mode and explicit types for `isolatedDeclarations`.
-- **Edge Compatibility:** Never rely on Node.js-only C++ bindings or `worker_threads` inside the core engine.
+- **Runtime Compatibility:** Never rely on native C++ bindings or `worker_threads` inside the core engine. `AsyncLocalStorage` uses `node:async_hooks`; edge integrations must document and test the runtime's Node compatibility requirement.
 - **Semantic Commits:** Use standard conventional commit format (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`).
 
 ---

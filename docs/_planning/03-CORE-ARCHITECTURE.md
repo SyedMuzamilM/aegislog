@@ -4,7 +4,7 @@
 
 ## 1. System Overview
 
-AegisLog processes every log invocation through a high-speed, zero-leak pipeline designed for modern asynchronous runtimes:
+AegisLog processes every log invocation through a high-speed redaction pipeline designed for modern asynchronous runtimes:
 
 ```
   [ Application Code / Middleware ]
@@ -118,12 +118,13 @@ Similar to how Express `helmet` applies default security headers, AegisLog's **S
 
 ---
 
-## 3. Universal Runtime Compatibility
+## 3. Runtime Compatibility
 
 AegisLog is designed from day one to operate identically across:
 
 - **Node.js:** (v18.0.0+) using native `node:async_hooks`.
 - **Bun:** (v1.0.0+) native high-speed streams.
 - **Deno:** (v1.30.0+) standard web APIs.
-- **Cloudflare Workers / Vercel Edge:** Pure JS execution with no native binary bindings or `worker_threads` dependencies.
+- **Cloudflare Workers:** Requires the `nodejs_compat` compatibility flag for `node:async_hooks`.
+- **Vercel:** Supported in the Node.js runtime. The Edge runtime does not provide the required `AsyncLocalStorage` API.
 - **Next.js (App Router):** First-class support in Server Components, Route Handlers, and Server Actions.

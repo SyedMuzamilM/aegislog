@@ -21,17 +21,17 @@ Developers on Reddit, Hacker News, and X (Twitter) consistently report three mis
 
 ## 2. Competitive Landscape & Gap Analysis
 
-| Feature                         | **Winston**              | **Pino**                       | **LogTape**               | **LogLayer**            | **The Ideal Modern Solution**                   |
-| :------------------------------ | :----------------------- | :----------------------------- | :------------------------ | :---------------------- | :---------------------------------------------- |
-| **First Release**               | 2011 (Legacy)            | 2016                           | 2024                      | 2023                    | 2026 Modern Standard                            |
-| **Strict TypeScript Native**    | ❌ (Bolted-on types)     | ⚠️ (Complex type defs)         | ✅ (Clean TS)             | ✅ (Clean TS)           | ✅ (100% Type-safe & inferred)                  |
-| **Edge & Serverless Support**   | ❌ (Node.js APIs)        | ❌ (Worker threads crash)      | ✅ (Universal)            | ⚠️ (Depends on backend) | ✅ (Zero native deps, universal)                |
-| **Out-of-box Pretty Console**   | ⚠️ (Requires formatters) | ❌ (Needs CLI pipe/transports) | ⚠️ (Basic format)         | ⚠️ (Depends on driver)  | ✅ (Gorgeous, instant, zero CLI pipe)           |
-| **Async Context Propagation**   | ❌ (Manual ALS config)   | ⚠️ (`pino-http` boilerplate)   | ⚠️ (Manual async context) | ❌ (Manual metadata)    | ✅ (First-class `AsyncLocalStorage` engine)     |
-| **User & Audit Trail System**   | ❌ (None)                | ❌ (None)                      | ❌ (None)                 | ❌ (None)               | ✅ (Actor/Action/Resource Audit Log separation) |
-| **"Helmet" Security Redaction** | ⚠️ (Manual formatters)   | ⚠️ (Manual paths regex)        | ❌ (None)                 | ⚠️ (Manual plugins)     | ✅ (Default-on PII & secret defense shield)     |
-| **Type-Safe Schema Validation** | ❌ (None)                | ❌ (None)                      | ❌ (None)                 | ❌ (None)               | ✅ (Optional Zod / Valibot event schemas)       |
-| **OpenTelemetry Alignment**     | ⚠️ (Third party plugin)  | ⚠️ (Manual hooks)              | ✅ (Sink available)       | ⚠️ (Wrapper)            | ✅ (Native traceId/spanId injection)            |
+| Feature                         | **Winston**              | **Pino**                       | **LogTape**               | **LogLayer**            | **The Ideal Modern Solution**                     |
+| :------------------------------ | :----------------------- | :----------------------------- | :------------------------ | :---------------------- | :------------------------------------------------ |
+| **First Release**               | 2011 (Legacy)            | 2016                           | 2024                      | 2023                    | 2026 Modern Standard                              |
+| **Strict TypeScript Native**    | ❌ (Bolted-on types)     | ⚠️ (Complex type defs)         | ✅ (Clean TS)             | ✅ (Clean TS)           | ✅ (100% Type-safe & inferred)                    |
+| **Edge & Serverless Support**   | ❌ (Node.js APIs)        | ❌ (Worker threads crash)      | ✅ (Universal)            | ⚠️ (Depends on backend) | ⚠️ (Requires Node-compatible `AsyncLocalStorage`) |
+| **Out-of-box Pretty Console**   | ⚠️ (Requires formatters) | ❌ (Needs CLI pipe/transports) | ⚠️ (Basic format)         | ⚠️ (Depends on driver)  | ✅ (Gorgeous, instant, zero CLI pipe)             |
+| **Async Context Propagation**   | ❌ (Manual ALS config)   | ⚠️ (`pino-http` boilerplate)   | ⚠️ (Manual async context) | ❌ (Manual metadata)    | ✅ (First-class `AsyncLocalStorage` engine)       |
+| **User & Audit Trail System**   | ❌ (None)                | ❌ (None)                      | ❌ (None)                 | ❌ (None)               | ✅ (Actor/Action/Resource Audit Log separation)   |
+| **"Helmet" Security Redaction** | ⚠️ (Manual formatters)   | ⚠️ (Manual paths regex)        | ❌ (None)                 | ⚠️ (Manual plugins)     | ✅ (Default-on PII & secret defense shield)       |
+| **Type-Safe Schema Validation** | ❌ (None)                | ❌ (None)                      | ❌ (None)                 | ❌ (None)               | ✅ (Optional Zod / Valibot event schemas)         |
+| **OpenTelemetry Alignment**     | ⚠️ (Third party plugin)  | ⚠️ (Manual hooks)              | ✅ (Sink available)       | ⚠️ (Wrapper)            | ✅ (Native traceId/spanId injection)              |
 
 ---
 
@@ -71,8 +71,8 @@ To build the breakout open-source logging project for the modern TypeScript era,
  ┌────────────────────────────────────────────────────────────────────────┐
  │                        MODERN TS LOGGING ENGINE                        │
  ├──────────────────┬──────────────────┬──────────────────┬───────────────┤
- │ 1. CONTEXT SHIELD│ 2. DUAL DX       │ 3. SECURITY CORE │ 4. UNIVERSAL  │
- │ Ambient ALS      │ Rich Dev TUI     │ Zero-leak PII    │ Node, Bun,    │
+ │ 1. CONTEXT SHIELD│ 2. DUAL DX       │ 3. SECURITY CORE │ 4. RUNTIMES   │
+ │ Ambient ALS      │ Rich Dev TUI     │ Built-in PII     │ Node, Bun,    │
  │ Actor & Tenant   │ Fast Prod JSON   │ Auto-redaction   │ Deno, Edge,   │
  │ Trace injection  │ Zero Pipe Hacks  │ Safe serializer  │ Cloudflare    │
  └──────────────────┴──────────────────┴──────────────────┴───────────────┘
@@ -82,7 +82,7 @@ To build the breakout open-source logging project for the modern TypeScript era,
    - First-class `AsyncLocalStorage` runner and middleware for Express, Fastify, Hono, Next.js, and NestJS.
    - Built-in recognition of `actor` (user), `tenant` (org), `session`, `requestId`, and `traceId`.
 
-2. **The "Helmet" for Logging (Zero-Leak Security):**
+2. **The "Helmet" for Logging (Built-in Secret Redaction):**
    - Built-in heuristic and dictionary sanitizer (passwords, tokens, JWTs, API keys, cookies, credit cards, emails, private keys).
    - Circular reference safe serialization without memory leaks or crashes.
 
@@ -90,8 +90,8 @@ To build the breakout open-source logging project for the modern TypeScript era,
    - **Local Dev:** Beautiful, structured terminal output with badges, stack trace highlights, and metadata tables without requiring CLI pipes.
    - **Production:** Microsecond-fast OpenTelemetry-compliant structured JSON streaming directly to stdout or pluggable sinks.
 
-4. **Edge-First & Universal Runtime:**
-   - Pure TypeScript with zero native C++ bindings, zero unpolyfilled Node-only APIs, and zero worker-thread crashes on Cloudflare Workers, Vercel, Supabase Edge, Bun, and Deno.
+4. **Node-Compatible Runtime Support:**
+   - Pure TypeScript with no native C++ bindings or worker threads. Cloudflare Workers require `nodejs_compat`; other edge runtimes must provide `node:async_hooks`.
 
 5. **Integrated Audit & Event Layer:**
    - Built-in support for structured event schemas (with optional Zod/Valibot validation) and dedicated audit log recording for compliance (SOC2 / GDPR).

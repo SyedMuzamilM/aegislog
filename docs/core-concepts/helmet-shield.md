@@ -1,6 +1,6 @@
 # Helmet Security Shield 🛡️
 
-The **Helmet Security Shield** is AegisLog's zero-leak PII and credential sanitization engine. It runs in-memory before any log entry or audit event is emitted or formatted, ensuring sensitive data never reaches log aggregators like Datadog, Axiom, CloudWatch, or local terminal histories.
+The **Helmet Security Shield** is AegisLog's built-in PII and credential sanitization engine. It sanitizes logger metadata, ambient context, errors, and complete audit records before they reach a sink. Applications still need tests for their own custom keys and masking rules.
 
 ---
 
