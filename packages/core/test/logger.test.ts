@@ -96,7 +96,7 @@ describe("AegisLog Core Engine", () => {
     const memory = new MemorySink();
     const logger = createLogger({
       sinks: [memory],
-      defaultMeta: { auth_token: "default-token", sessionId: "session-1" },
+      defaultMeta: { auth_token: "default-token", session: "session-secret", sessionId: "session-1" },
     });
 
     logger.info("Sensitive variants", {
@@ -107,6 +107,7 @@ describe("AegisLog Core Engine", () => {
 
     expect(memory.entries[0]?.meta).toEqual({
       auth_token: "[REDACTED]",
+      session: "[REDACTED]",
       sessionId: "[REDACTED]",
       accountNumber: "[REDACTED]",
       routing_number: "[REDACTED]",

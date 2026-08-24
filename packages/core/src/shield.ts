@@ -37,6 +37,7 @@ const DEFAULT_SENSITIVE_KEYS = new Set([
   "dob",
   "cookie",
   "set-cookie",
+  "session",
   "sessionid",
   "session_token",
   "session_secret",
@@ -254,7 +255,10 @@ export class SecurityShield {
       return "[MAX_DEPTH_EXCEEDED]";
     }
 
-    if (key && this.isSensitiveKey(key)) {
+    const normalizedKey = key.toLowerCase().replace(/[-_]/g, "");
+    const isStructuredSession =
+      normalizedKey === "session" && val !== null && typeof val === "object";
+    if (key && this.isSensitiveKey(key) && !isStructuredSession) {
       return this.maskString;
     }
 
