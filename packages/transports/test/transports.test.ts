@@ -29,6 +29,15 @@ describe("AegisLog Transports", () => {
     expect(body.resourceLogs[0]?.scopeLogs[0]?.logRecords[0]?.body?.stringValue).toBe(
       "Payment authorization started",
     );
+    const attributes = body.resourceLogs[0]?.scopeLogs[0]?.logRecords[0]?.attributes;
+    expect(attributes).toContainEqual({
+      key: "meta",
+      value: {
+        kvlistValue: {
+          values: [{ key: "orderId", value: { stringValue: "ord_991" } }],
+        },
+      },
+    });
 
     fetchSpy.mockRestore();
   });
@@ -112,9 +121,13 @@ describe("AegisLog Transports", () => {
 
   it("handles errors gracefully via onError callback in MongoBatchSink", async () => {
     const onErrorSpy = vi.fn();
+    let shouldFail = true;
     const failingCollection = {
       insertMany: vi.fn(async () => {
-        throw new Error("Mongo connection lost");
+        if (shouldFail) {
+          throw new Error("Mongo connection lost");
+        }
+        return { acknowledged: true };
       }),
     };
 
@@ -126,12 +139,41 @@ describe("AegisLog Transports", () => {
     const logger = createLogger({ sinks: [mongoSink] });
     logger.error("DB query timeout");
 
-    await mongoSink.flush();
+    await expect(mongoSink.flush()).rejects.toThrow("Mongo connection lost");
 
     expect(failingCollection.insertMany).toHaveBeenCalled();
     expect(onErrorSpy).toHaveBeenCalledTimes(1);
     expect(onErrorSpy.mock.calls[0][0].message).toBe("Mongo connection lost");
     expect(onErrorSpy.mock.calls[0][1][0].message).toBe("DB query timeout");
+
+    shouldFail = false;
+    await mongoSink.flush();
+    expect(failingCollection.insertMany).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps HTTP batches queued when the server rejects delivery", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("unavailable", { status: 503 }))
+      .mockResolvedValueOnce(new Response("{}", { status: 200 }));
+    const sink = new HttpBatchSink({
+      url: "https://logs.example.com/ingest",
+      flushIntervalMs: 60_000,
+    });
+
+    sink.log({
+      level: "error",
+      message: "Retain me",
+      timestamp: "2026-08-18T10:00:00.000Z",
+    });
+
+    await expect(sink.flush()).rejects.toThrow("HTTP 503");
+    await sink.flush();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    const retriedBody = JSON.parse(fetchSpy.mock.calls[1]?.[1]?.body as string);
+    expect(retriedBody.logs[0].message).toBe("Retain me");
+    fetchSpy.mockRestore();
   });
 
   it("supports direct Mongoose model and mongoSink.query helper", async () => {

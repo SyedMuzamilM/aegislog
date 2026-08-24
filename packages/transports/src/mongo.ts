@@ -1,4 +1,5 @@
 import type { AuditRecord, LogEntry, LogLevel, LogSink } from "aegislog";
+import { BatchDispatcher } from "./batch.js";
 
 export interface MongoCollectionLike {
   insertMany?: (docs: any[], options?: { ordered?: boolean; [key: string]: unknown }) => any;
@@ -91,15 +92,12 @@ export class MongoBatchSink implements LogSink {
   private model?: any;
   private auditCollection?: MongoCollectionLike;
   private auditModel?: any;
-  private batchSize: number;
-  private flushIntervalMs: number;
   private transform?: (entry: LogEntry) => unknown;
   private transformAudit?: (record: AuditRecord) => unknown;
   private onError?: (error: Error, entries: (LogEntry | AuditRecord)[]) => void;
-
-  private entryQueue: LogEntry[] = [];
-  private auditQueue: AuditRecord[] = [];
-  private timer?: ReturnType<typeof setTimeout>;
+  private dispatcher: BatchDispatcher<
+    { type: "log"; value: LogEntry } | { type: "audit"; value: AuditRecord }
+  >;
 
   constructor(options: MongoBatchSinkOptions) {
     this.name = options.name ?? "mongo-batch";
@@ -111,23 +109,29 @@ export class MongoBatchSink implements LogSink {
       options.auditCollection ??
       (options.auditModel ? (options.auditModel.collection ?? options.auditModel) : undefined);
     this.auditModel = options.auditModel;
-    this.batchSize = options.batchSize ?? 50;
-    this.flushIntervalMs = options.flushIntervalMs ?? 2000;
     this.transform = options.transform;
     this.transformAudit = options.transformAudit;
     this.onError = options.onError;
+
+    if (!this.collection && !this.model) {
+      throw new TypeError("MongoBatchSink requires a collection or model");
+    }
+
+    this.dispatcher = new BatchDispatcher({
+      batchSize: options.batchSize ?? 50,
+      flushIntervalMs: options.flushIntervalMs ?? 2000,
+      deliver: (items) => this.deliver(items),
+    });
   }
 
   public log(entry: LogEntry): void {
-    this.entryQueue.push(entry);
-    this.scheduleFlush();
+    this.dispatcher.enqueue({ type: "log", value: entry });
   }
 
   public logAudit(record: AuditRecord): void {
     if (this.auditCollection || this.auditModel) {
-      this.auditQueue.push(record);
+      this.dispatcher.enqueue({ type: "audit", value: record });
     } else {
-      // Default: wrap audit record into log entry for unified collection
       const fallbackEntry: LogEntry = {
         level: "info",
         message: `[AUDIT] ${record.action} on ${record.resource.type}:${record.resource.id}`,
@@ -140,36 +144,23 @@ export class MongoBatchSink implements LogSink {
         },
         meta: { audit: record },
       };
-      this.entryQueue.push(fallbackEntry);
-    }
-    this.scheduleFlush();
-  }
-
-  private scheduleFlush(): void {
-    if (this.entryQueue.length + this.auditQueue.length >= this.batchSize) {
-      void this.flush();
-    } else if (!this.timer) {
-      this.timer = setTimeout(() => {
-        void this.flush();
-      }, this.flushIntervalMs);
-      this.timer?.unref?.();
+      this.dispatcher.enqueue({ type: "log", value: fallbackEntry });
     }
   }
 
   public async flush(): Promise<void> {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = undefined;
-    }
+    await this.dispatcher.flush();
+  }
 
-    if (this.entryQueue.length === 0 && this.auditQueue.length === 0) {
-      return;
-    }
-
-    const entriesToFlush = [...this.entryQueue];
-    const auditsToFlush = [...this.auditQueue];
-    this.entryQueue = [];
-    this.auditQueue = [];
+  private async deliver(
+    items: Array<{ type: "log"; value: LogEntry } | { type: "audit"; value: AuditRecord }>,
+  ): Promise<void> {
+    const entriesToFlush = items
+      .filter((item): item is { type: "log"; value: LogEntry } => item.type === "log")
+      .map((item) => item.value);
+    const auditsToFlush = items
+      .filter((item): item is { type: "audit"; value: AuditRecord } => item.type === "audit")
+      .map((item) => item.value);
 
     const tasks: Promise<unknown>[] = [];
 
@@ -179,14 +170,10 @@ export class MongoBatchSink implements LogSink {
 
       if (target?.insertMany) {
         tasks.push(
-          Promise.resolve(
-            target.insertMany(docs as Record<string, unknown>[], { ordered: false }),
-          ).catch((err: unknown) => {
-            if (this.onError) {
-              this.onError(err instanceof Error ? err : new Error(String(err)), entriesToFlush);
-            }
-          }),
+          Promise.resolve(target.insertMany(docs as Record<string, unknown>[], { ordered: false })),
         );
+      } else {
+        throw new TypeError("MongoBatchSink log target does not implement insertMany()");
       }
     }
 
@@ -198,18 +185,20 @@ export class MongoBatchSink implements LogSink {
 
       if (target?.insertMany) {
         tasks.push(
-          Promise.resolve(
-            target.insertMany(docs as Record<string, unknown>[], { ordered: false }),
-          ).catch((err: unknown) => {
-            if (this.onError) {
-              this.onError(err instanceof Error ? err : new Error(String(err)), auditsToFlush);
-            }
-          }),
+          Promise.resolve(target.insertMany(docs as Record<string, unknown>[], { ordered: false })),
         );
+      } else {
+        throw new TypeError("MongoBatchSink audit target does not implement insertMany()");
       }
     }
 
-    await Promise.allSettled(tasks);
+    try {
+      await Promise.all(tasks);
+    } catch (error) {
+      const normalized = error instanceof Error ? error : new Error(String(error));
+      this.onError?.(normalized, [...entriesToFlush, ...auditsToFlush]);
+      throw normalized;
+    }
   }
 
   /**
@@ -228,7 +217,10 @@ export class MongoBatchSink implements LogSink {
     if (options.actorId) filter["context.actor.id"] = options.actorId;
     if (options.tenantId) filter["context.tenant.id"] = options.tenantId;
     if (options.requestId) filter["context.requestId"] = options.requestId;
-    if (options.search) filter.message = { $regex: options.search, $options: "i" };
+    if (options.search) {
+      const escapedSearch = options.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter.message = { $regex: escapedSearch, $options: "i" };
+    }
 
     if (options.startDate || options.endDate) {
       filter.timestamp = {};
@@ -240,7 +232,7 @@ export class MongoBatchSink implements LogSink {
       }
     }
 
-    const pageSize = Math.min(options.limit ?? 50, 500);
+    const pageSize = Math.max(1, Math.min(options.limit ?? 50, 500));
     const skip = options.skip ?? (Math.max(options.page ?? 1, 1) - 1) * pageSize;
 
     let cursor = target.find(filter);

@@ -1,4 +1,5 @@
 import type { AuditRecord, LogEntry, LogSink } from "aegislog";
+import { BatchDispatcher } from "./batch.js";
 
 export interface HttpBatchSinkOptions {
   name?: string;
@@ -13,12 +14,10 @@ export class HttpBatchSink implements LogSink {
   public name: string;
   private url: string;
   private headers: Record<string, string>;
-  private batchSize: number;
-  private flushIntervalMs: number;
   private transform?: (entries: LogEntry[], auditRecords: AuditRecord[]) => unknown;
-  private entryQueue: LogEntry[] = [];
-  private auditQueue: AuditRecord[] = [];
-  private timer?: ReturnType<typeof setTimeout>;
+  private dispatcher: BatchDispatcher<
+    { type: "log"; value: LogEntry } | { type: "audit"; value: AuditRecord }
+  >;
 
   constructor(options: HttpBatchSinkOptions) {
     this.name = options.name ?? "http-batch";
@@ -27,62 +26,46 @@ export class HttpBatchSink implements LogSink {
       "Content-Type": "application/json",
       ...options.headers,
     };
-    this.batchSize = options.batchSize ?? 50;
-    this.flushIntervalMs = options.flushIntervalMs ?? 3000;
     this.transform = options.transform;
-  }
+    this.dispatcher = new BatchDispatcher({
+      batchSize: options.batchSize ?? 50,
+      flushIntervalMs: options.flushIntervalMs ?? 3000,
+      deliver: async (items) => {
+        const entries = items
+          .filter((item): item is { type: "log"; value: LogEntry } => item.type === "log")
+          .map((item) => item.value);
+        const auditRecords = items
+          .filter((item): item is { type: "audit"; value: AuditRecord } => item.type === "audit")
+          .map((item) => item.value);
+        const payload = this.transform
+          ? this.transform(entries, auditRecords)
+          : { logs: entries, audit: auditRecords };
 
-  public log(entry: LogEntry): void {
-    this.entryQueue.push(entry);
-    this.scheduleFlush();
-  }
-
-  public logAudit(record: AuditRecord): void {
-    this.auditQueue.push(record);
-    this.scheduleFlush();
-  }
-
-  private scheduleFlush(): void {
-    if (this.entryQueue.length + this.auditQueue.length >= this.batchSize) {
-      void this.flush();
-    } else if (!this.timer) {
-      this.timer = setTimeout(() => {
-        void this.flush();
-      }, this.flushIntervalMs);
-      this.timer?.unref?.();
-    }
-  }
-
-  public async flush(): Promise<void> {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = undefined;
-    }
-
-    if (this.entryQueue.length === 0 && this.auditQueue.length === 0) {
-      return;
-    }
-
-    const entries = [...this.entryQueue];
-    const auditRecords = [...this.auditQueue];
-    this.entryQueue = [];
-    this.auditQueue = [];
-
-    const payload = this.transform
-      ? this.transform(entries, auditRecords)
-      : { logs: entries, audit: auditRecords };
-
-    try {
-      if (typeof fetch !== "undefined") {
-        await fetch(this.url, {
+        if (typeof fetch === "undefined") {
+          throw new Error(`${this.name}: fetch is not available in this runtime`);
+        }
+        const response = await fetch(this.url, {
           method: "POST",
           headers: this.headers,
           body: JSON.stringify(payload),
         });
-      }
-    } catch {
-      // Swallowed safely
-    }
+        if (!response.ok) {
+          throw new Error(`${this.name}: HTTP ${response.status} ${response.statusText}`);
+        }
+      },
+    });
+  }
+
+  public log(entry: LogEntry): void {
+    this.dispatcher.enqueue({ type: "log", value: entry });
+  }
+
+  public logAudit(record: AuditRecord): void {
+    this.dispatcher.enqueue({ type: "audit", value: record });
+  }
+
+  public async flush(): Promise<void> {
+    await this.dispatcher.flush();
   }
 }
 
@@ -102,7 +85,10 @@ export class AxiomSink extends HttpBatchSink {
       },
       batchSize: options.batchSize,
       flushIntervalMs: options.flushIntervalMs,
-      transform: (entries) => entries,
+      transform: (entries, auditRecords) => [
+        ...entries,
+        ...auditRecords.map((record) => ({ type: "audit", ...record })),
+      ],
     });
   }
 }

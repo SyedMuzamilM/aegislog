@@ -1,4 +1,5 @@
-import type { LogEntry, LogSink, LogLevel } from "aegislog";
+import type { AuditRecord, LogEntry, LogLevel, LogSink } from "aegislog";
+import { BatchDispatcher } from "./batch.js";
 
 export interface OpenTelemetrySinkOptions {
   endpoint?: string;
@@ -19,6 +20,43 @@ const OTEL_SEVERITY_NUMBERS: Record<LogLevel, number> = {
   fatal: 21,
 };
 
+type OtelAnyValue =
+  | { stringValue: string }
+  | { boolValue: boolean }
+  | { intValue: string }
+  | { doubleValue: number }
+  | { arrayValue: { values: OtelAnyValue[] } }
+  | { kvlistValue: { values: Array<{ key: string; value: OtelAnyValue }> } };
+
+function toOtelValue(value: unknown): OtelAnyValue {
+  if (value === null || value === undefined) {
+    return { stringValue: String(value) };
+  }
+  if (typeof value === "string") {
+    return { stringValue: value };
+  }
+  if (typeof value === "boolean") {
+    return { boolValue: value };
+  }
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? { intValue: String(value) } : { doubleValue: value };
+  }
+  if (typeof value === "bigint") {
+    return { intValue: value.toString() };
+  }
+  if (Array.isArray(value)) {
+    return { arrayValue: { values: value.map(toOtelValue) } };
+  }
+  if (typeof value === "object") {
+    return {
+      kvlistValue: {
+        values: Object.entries(value).map(([key, item]) => ({ key, value: toOtelValue(item) })),
+      },
+    };
+  }
+  return { stringValue: String(value) };
+}
+
 export class OpenTelemetrySink implements LogSink {
   public name = "opentelemetry";
   private endpoint: string;
@@ -26,10 +64,7 @@ export class OpenTelemetrySink implements LogSink {
   private serviceVersion?: string;
   private environment?: string;
   private headers: Record<string, string>;
-  private batchSize: number;
-  private flushIntervalMs: number;
-  private queue: LogEntry[] = [];
-  private timer?: ReturnType<typeof setTimeout>;
+  private dispatcher: BatchDispatcher<LogEntry>;
 
   constructor(options: OpenTelemetrySinkOptions = {}) {
     this.endpoint = options.endpoint ?? "http://localhost:4318/v1/logs";
@@ -40,35 +75,38 @@ export class OpenTelemetrySink implements LogSink {
       "Content-Type": "application/json",
       ...options.headers,
     };
-    this.batchSize = options.batchSize ?? 50;
-    this.flushIntervalMs = options.flushIntervalMs ?? 3000;
+    this.dispatcher = new BatchDispatcher({
+      batchSize: options.batchSize ?? 50,
+      flushIntervalMs: options.flushIntervalMs ?? 3000,
+      deliver: (batch) => this.deliver(batch),
+    });
   }
 
   public log(entry: LogEntry): void {
-    this.queue.push(entry);
+    this.dispatcher.enqueue(entry);
+  }
 
-    if (this.queue.length >= this.batchSize) {
-      void this.flush();
-    } else if (!this.timer) {
-      this.timer = setTimeout(() => {
-        void this.flush();
-      }, this.flushIntervalMs);
-    }
+  public logAudit(record: AuditRecord): void {
+    this.dispatcher.enqueue({
+      level: record.outcome === "failure" ? "error" : record.outcome === "denied" ? "warn" : "info",
+      message: `[AUDIT] ${record.action} on ${record.resource.type}:${record.resource.id}`,
+      timestamp: record.timestamp ?? new Date().toISOString(),
+      context: {
+        requestId: record.eventId ?? record.traceId ?? "audit",
+        traceId: record.traceId,
+        actor: record.actor,
+        tenant: record.tenant,
+        session: record.session,
+      },
+      meta: { audit: record },
+    });
   }
 
   public async flush(): Promise<void> {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = undefined;
-    }
+    await this.dispatcher.flush();
+  }
 
-    if (this.queue.length === 0) {
-      return;
-    }
-
-    const batch = [...this.queue];
-    this.queue = [];
-
+  private async deliver(batch: LogEntry[]): Promise<void> {
     const resourceAttributes: Array<{ key: string; value: { stringValue: string } }> = [
       { key: "service.name", value: { stringValue: this.serviceName } },
     ];
@@ -86,17 +124,10 @@ export class OpenTelemetrySink implements LogSink {
     }
 
     const logRecords = batch.map((entry) => {
-      const attributes: Array<{ key: string; value: { stringValue?: string; intValue?: number } }> =
-        [];
+      const attributes: Array<{ key: string; value: OtelAnyValue }> = [];
 
       if (entry.namespace) {
         attributes.push({ key: "logger.namespace", value: { stringValue: entry.namespace } });
-      }
-      if (entry.context?.actor?.id) {
-        attributes.push({ key: "user.id", value: { stringValue: entry.context.actor.id } });
-      }
-      if (entry.context?.tenant?.id) {
-        attributes.push({ key: "tenant.id", value: { stringValue: entry.context.tenant.id } });
       }
       if (entry.context?.requestId) {
         attributes.push({
@@ -104,8 +135,27 @@ export class OpenTelemetrySink implements LogSink {
           value: { stringValue: entry.context.requestId },
         });
       }
+      if (entry.context?.actor) {
+        attributes.push({ key: "user", value: toOtelValue(entry.context.actor) });
+      }
+      if (entry.context?.tenant) {
+        attributes.push({ key: "tenant", value: toOtelValue(entry.context.tenant) });
+      }
+      if (entry.context?.session) {
+        attributes.push({ key: "session", value: toOtelValue(entry.context.session) });
+      }
+      if (entry.context?.tags) {
+        attributes.push({ key: "tags", value: toOtelValue(entry.context.tags) });
+      }
+      if (entry.meta) {
+        attributes.push({ key: "meta", value: toOtelValue(entry.meta) });
+      }
+      if (entry.error) {
+        attributes.push({ key: "error", value: toOtelValue(entry.error) });
+      }
 
-      const nanoTime = `${new Date(entry.timestamp).getTime()}000000`;
+      const timestampMs = new Date(entry.timestamp).getTime();
+      const nanoTime = `${Number.isFinite(timestampMs) ? timestampMs : Date.now()}000000`;
 
       return {
         timeUnixNano: nanoTime,
@@ -133,16 +183,16 @@ export class OpenTelemetrySink implements LogSink {
       ],
     };
 
-    try {
-      if (typeof fetch !== "undefined") {
-        await fetch(this.endpoint, {
-          method: "POST",
-          headers: this.headers,
-          body: JSON.stringify(otelPayload),
-        });
-      }
-    } catch {
-      // Gracefully swallow network failures in log transport to never crash application
+    if (typeof fetch === "undefined") {
+      throw new Error("opentelemetry: fetch is not available in this runtime");
+    }
+    const response = await fetch(this.endpoint, {
+      method: "POST",
+      headers: this.headers,
+      body: JSON.stringify(otelPayload),
+    });
+    if (!response.ok) {
+      throw new Error(`opentelemetry: HTTP ${response.status} ${response.statusText}`);
     }
   }
 }
