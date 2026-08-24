@@ -4,10 +4,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🛡️ AegisLog Dev Inspector</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
+  <style nonce="__CSP_NONCE__">
     :root {
       --bg: #090a0f;
       --card-bg: #12141c;
@@ -246,7 +243,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     </div>
   </main>
 
-  <script>
+  <script nonce="__CSP_NONCE__">
     const logs = [];
     let activeFilter = 'all';
     let searchQuery = '';
@@ -262,6 +259,12 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 
     let errorCount = 0;
     let auditCount = 0;
+
+    function escapeHtml(value) {
+      const span = document.createElement('span');
+      span.textContent = String(value);
+      return span.innerHTML;
+    }
 
     function renderLogs() {
       const filtered = logs.filter(item => {
@@ -283,8 +286,9 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 
       container.innerHTML = filtered.slice(-200).reverse().map(item => {
         const isAudit = item.type === 'audit' || Boolean(item.action);
-        const level = isAudit ? 'audit' : (item.level || 'info');
-        const rawTime = item.timestamp || new Date().toISOString();
+        const candidateLevel = isAudit ? 'audit' : (item.level || 'info');
+        const level = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'audit'].includes(candidateLevel) ? candidateLevel : 'info';
+        const rawTime = String(item.timestamp || new Date().toISOString());
         const time = rawTime.includes('T') ? rawTime.split('T')[1].slice(0, 8) : rawTime.slice(0, 8);
         const user = item.actor?.email || item.actor?.id || item.context?.actor?.email || item.context?.actor?.id;
         const reqId = item.requestId || item.context?.requestId;
@@ -292,25 +296,25 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         let detailsHtml = '';
         const meta = item.meta || item.changes || item.details;
         if (meta && Object.keys(meta).length > 0) {
-          detailsHtml = '<pre class="log-details">' + JSON.stringify(meta, null, 2) + '</pre>';
+          detailsHtml = '<pre class="log-details">' + escapeHtml(JSON.stringify(meta, null, 2)) + '</pre>';
         }
 
         let errorHtml = '';
         if (item.error) {
-          errorHtml = '<div class="stack-trace">' + (item.error.stack || item.error.message || JSON.stringify(item.error)) + '</div>';
+          errorHtml = '<div class="stack-trace">' + escapeHtml(item.error.stack || item.error.message || JSON.stringify(item.error)) + '</div>';
         }
 
         return '<div class="log-card">' +
           '<div class="log-header">' +
             '<div class="log-meta-left">' +
               '<span class="badge badge-' + level + '">' + level.toUpperCase() + '</span>' +
-              (user ? '<span class="log-user">👤 ' + user + '</span>' : '') +
-              (reqId ? '<span class="log-time">ID: ' + reqId.slice(0, 8) + '</span>' : '') +
-              (item.namespace ? '<span class="log-time">(' + item.namespace + ')</span>' : '') +
+              (user ? '<span class="log-user">👤 ' + escapeHtml(user) + '</span>' : '') +
+              (reqId ? '<span class="log-time">ID: ' + escapeHtml(String(reqId).slice(0, 8)) + '</span>' : '') +
+              (item.namespace ? '<span class="log-time">(' + escapeHtml(item.namespace) + ')</span>' : '') +
             '</div>' +
-            '<span class="log-time">' + time + '</span>' +
+            '<span class="log-time">' + escapeHtml(time) + '</span>' +
           '</div>' +
-          '<div class="log-msg">' + (isAudit ? '➔ ' + item.action + ' on ' + (item.resource?.type ? item.resource.type + ':' + item.resource.id : JSON.stringify(item.resource)) : item.message) + '</div>' +
+          '<div class="log-msg">' + escapeHtml(isAudit ? '➔ ' + item.action + ' on ' + (item.resource?.type ? item.resource.type + ':' + item.resource.id : JSON.stringify(item.resource)) : item.message) + '</div>' +
           detailsHtml +
           errorHtml +
         '</div>';
@@ -319,7 +323,10 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 
     function connectSSE() {
       const statusDot = document.querySelector('.status-dot');
-      const evtSource = new EventSource('/api/stream');
+      const streamUrl = new URL('/api/stream', window.location.origin);
+      const token = new URLSearchParams(window.location.search).get('token');
+      if (token) streamUrl.searchParams.set('token', token);
+      const evtSource = new EventSource(streamUrl);
 
       evtSource.onopen = () => {
         if (statusDot) {
@@ -329,7 +336,6 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       };
 
       evtSource.onmessage = (e) => {
-        if (isPaused) return;
         try {
           const item = JSON.parse(e.data);
           logs.push(item);
@@ -342,7 +348,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
             auditCount++;
             statAudit.textContent = auditCount;
           }
-          renderLogs();
+          if (!isPaused) renderLogs();
         } catch (err) {
           console.error("Failed to parse incoming log event", err);
         }
@@ -353,7 +359,6 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
           statusDot.style.background = 'var(--warn)';
           statusDot.style.boxShadow = '0 0 8px var(--warn)';
         }
-        setTimeout(connectSSE, 2000);
       };
     }
 
@@ -386,6 +391,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     btnPause.addEventListener('click', () => {
       isPaused = !isPaused;
       btnPause.textContent = isPaused ? 'Resume Stream' : 'Pause Stream';
+      if (!isPaused) renderLogs();
     });
   </script>
 </body>
