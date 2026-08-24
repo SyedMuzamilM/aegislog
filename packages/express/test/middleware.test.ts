@@ -42,4 +42,35 @@ describe("AegisLog Express Middleware", () => {
       server.close();
     }
   });
+
+  it("forwards rejected actor resolution to Express 4 error middleware", async () => {
+    const memory = new MemorySink();
+    const testLogger = createLogger({ sinks: [memory] });
+    const app = express();
+    app.use(
+      aegisExpressMiddleware({
+        logger: testLogger,
+        getActor: async () => {
+          throw new Error("Authentication service unavailable");
+        },
+      }),
+    );
+    app.get("/test", (_req, res) => res.json({ ok: true }));
+    app.use(
+      (error: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+        res.status(503).json({ error: error.message });
+      },
+    );
+
+    const server = app.listen(0);
+    const port = (server.address() as { port: number }).port;
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/test`);
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: "Authentication service unavailable" });
+    } finally {
+      server.close();
+    }
+  });
 });

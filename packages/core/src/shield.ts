@@ -37,7 +37,6 @@ const DEFAULT_SENSITIVE_KEYS = new Set([
   "dob",
   "cookie",
   "set-cookie",
-  "session",
   "sessionid",
   "session_token",
   "session_secret",

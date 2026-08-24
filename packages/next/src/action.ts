@@ -1,6 +1,7 @@
 import {
   type ActorContext,
   type TenantContext,
+  generateId,
   logger as defaultLogger,
   runWithContext,
   type AegisLogger,
@@ -20,8 +21,7 @@ export async function withAegisContext<T>(
   fn: () => Promise<T>,
 ): Promise<T> {
   const log = options.logger ?? defaultLogger;
-  const requestId =
-    options.requestId ?? `act_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+  const requestId = options.requestId ?? generateId();
   const tags = {
     ...options.tags,
     ...(options.actionName ? { action: options.actionName } : {}),
@@ -42,6 +42,7 @@ export async function withAegisContext<T>(
 
       try {
         const result = await fn();
+        log.completeRequest(200, requestId);
         if (options.actionName) {
           const duration = Number((performance.now() - start).toFixed(2));
           log.info(`[ServerAction:Success] ${options.actionName} in ${duration}ms`, {

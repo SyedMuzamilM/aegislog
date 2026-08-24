@@ -2,6 +2,7 @@ import type { Context, MiddlewareHandler } from "hono";
 import {
   type ActorContext,
   type TenantContext,
+  generateId,
   logger as defaultLogger,
   runWithContext,
   type AegisLogger,
@@ -27,10 +28,7 @@ export function aegisMiddleware(options: HonoAegisOptions = {}): MiddlewareHandl
       }
     };
 
-    const requestId =
-      getHdr("x-request-id") ||
-      getHdr("cf-ray") ||
-      `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
+    const requestId = getHdr("x-request-id") || getHdr("cf-ray") || generateId();
 
     const traceHeader = getHdr("traceparent") || getHdr("x-trace-id");
     const traceId = traceHeader ? traceHeader.split("-")[1] || traceHeader : undefined;
@@ -74,6 +72,7 @@ export function aegisMiddleware(options: HonoAegisOptions = {}): MiddlewareHandl
         }
 
         const duration = Number((performance.now() - start).toFixed(2));
+        log.completeRequest(c.res.status, requestId);
         if (logRequests) {
           const status = c.res.status;
           const level = status >= 500 ? "error" : status >= 400 ? "warn" : "info";

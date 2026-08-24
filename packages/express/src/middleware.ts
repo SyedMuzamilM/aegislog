@@ -3,6 +3,7 @@ import {
   type ActorContext,
   type AegisLogger,
   type TenantContext,
+  generateId,
   logger,
   runWithContext,
 } from "aegislog";
@@ -21,11 +22,12 @@ export function aegisExpressMiddleware(
   const activeLogger = options.logger ?? logger;
 
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const requestIdHeader = req.headers["x-request-id"];
     const requestId =
-      (req.headers["x-request-id"] as string) ||
-      `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
+      (Array.isArray(requestIdHeader) ? requestIdHeader[0] : requestIdHeader) ?? generateId();
 
-    const traceHeader = (req.headers["traceparent"] || req.headers["x-trace-id"]) as string;
+    const rawTraceHeader = req.headers["traceparent"] || req.headers["x-trace-id"];
+    const traceHeader = Array.isArray(rawTraceHeader) ? rawTraceHeader[0] : rawTraceHeader;
     const traceId = traceHeader ? traceHeader.split("-")[1] || traceHeader : undefined;
 
     const ip =
@@ -35,8 +37,14 @@ export function aegisExpressMiddleware(
 
     const userAgent = req.headers["user-agent"] as string;
 
-    const actor = options.getActor ? await options.getActor(req) : undefined;
-    const tenant = options.getTenant ? await options.getTenant(req) : undefined;
+    let actor: ActorContext | undefined;
+    let tenant: TenantContext | undefined;
+    try {
+      [actor, tenant] = await Promise.all([options.getActor?.(req), options.getTenant?.(req)]);
+    } catch (error) {
+      next(error instanceof Error ? error : new Error(String(error)));
+      return;
+    }
 
     runWithContext(
       {
@@ -53,7 +61,10 @@ export function aegisExpressMiddleware(
           activeLogger.debug(`--> ${req.method} ${req.originalUrl || req.url}`);
         }
 
+        let finished = false;
         res.on("finish", () => {
+          finished = true;
+          activeLogger.completeRequest(res.statusCode, requestId);
           if (!logRequests) return;
           const duration = Number((performance.now() - start).toFixed(2));
           const status = res.statusCode;
@@ -67,6 +78,14 @@ export function aegisExpressMiddleware(
           } else {
             activeLogger.info(msg, { status, durationMs: duration });
           }
+        });
+        res.on("close", () => {
+          if (finished) return;
+          activeLogger.completeRequest(500, requestId);
+          if (!logRequests) return;
+          activeLogger.error(`<-- ${req.method} ${req.originalUrl || req.url} connection closed`, {
+            status: res.statusCode,
+          });
         });
 
         next();

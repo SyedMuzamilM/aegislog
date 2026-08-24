@@ -3,6 +3,7 @@ import fp from "fastify-plugin";
 import {
   type ActorContext,
   type TenantContext,
+  generateId,
   logger as defaultLogger,
   runWithContext,
   type AegisLogger,
@@ -27,20 +28,22 @@ async function aegisFastifyPluginFn(
   fastify.addHook(
     "onRequest",
     (req: FastifyRequest, _reply: FastifyReply, done: (err?: Error) => void) => {
+      const requestIdHeader = req.headers["x-request-id"];
       const requestId =
-        (req.headers["x-request-id"] as string) ||
-        `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
+        (Array.isArray(requestIdHeader) ? requestIdHeader[0] : requestIdHeader) ?? generateId();
 
-      const traceHeader = (req.headers["traceparent"] || req.headers["x-trace-id"]) as string;
+      const rawTraceHeader = req.headers["traceparent"] || req.headers["x-trace-id"];
+      const traceHeader = Array.isArray(rawTraceHeader) ? rawTraceHeader[0] : rawTraceHeader;
       const traceId = traceHeader ? traceHeader.split("-")[1] || traceHeader : undefined;
       const ip = req.ip || (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim();
       const userAgent = req.headers["user-agent"] as string;
 
-      (req as unknown as { __aegisStart: number }).__aegisStart = performance.now();
-
-      if (logRequests) {
-        log.debug(`--> ${req.method} ${req.url}`);
-      }
+      const requestState = req as unknown as {
+        __aegisStart: number;
+        __aegisRequestId: string;
+      };
+      requestState.__aegisStart = performance.now();
+      requestState.__aegisRequestId = requestId;
 
       const actorPromise = options.getActor
         ? Promise.resolve(options.getActor(req))
@@ -60,6 +63,9 @@ async function aegisFastifyPluginFn(
               session: { id: requestId, ip, userAgent },
             },
             () => {
+              if (logRequests) {
+                log.debug(`--> ${req.method} ${req.url}`);
+              }
               done();
             },
           );
@@ -69,8 +75,13 @@ async function aegisFastifyPluginFn(
   );
 
   fastify.addHook("onResponse", async (req: FastifyRequest, reply: FastifyReply) => {
+    const requestState = req as unknown as {
+      __aegisStart?: number;
+      __aegisRequestId?: string;
+    };
+    log.completeRequest(reply.statusCode, requestState.__aegisRequestId ?? req.id);
     if (!logRequests) return;
-    const start = (req as unknown as { __aegisStart?: number }).__aegisStart ?? performance.now();
+    const start = requestState.__aegisStart ?? performance.now();
     const duration = Number((performance.now() - start).toFixed(2));
     const status = reply.statusCode;
     const level = status >= 500 ? "error" : status >= 400 ? "warn" : "info";
