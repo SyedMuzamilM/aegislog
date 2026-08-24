@@ -96,7 +96,11 @@ describe("AegisLog Core Engine", () => {
     const memory = new MemorySink();
     const logger = createLogger({
       sinks: [memory],
-      defaultMeta: { auth_token: "default-token", session: "session-secret", sessionId: "session-1" },
+      defaultMeta: {
+        auth_token: "default-token",
+        session: "session-secret",
+        sessionId: "session-1",
+      },
     });
 
     logger.info("Sensitive variants", {
