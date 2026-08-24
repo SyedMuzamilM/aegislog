@@ -1,6 +1,6 @@
 {
   "name": "@aegislog/fastify",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Fastify plugin adapter for AegisLog.",
   "homepage": "https://github.com/syedmuzamilm/aegislog#readme",
   "license": "MIT",
