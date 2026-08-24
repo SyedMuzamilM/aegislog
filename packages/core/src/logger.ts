@@ -14,13 +14,17 @@ import {
 } from "./types.js";
 
 export class AegisLogger {
+  private static readonly GLOBAL_RING_BUFFER_KEY = "__aegis_global__";
   private level: LogLevel;
   private namespace?: string;
   private shield: SecurityShield;
   private sinks: LogSink[];
   private defaultMeta: Record<string, unknown>;
   private ringBufferOptions: RingBufferOptions;
-  private ringBuffer: LogEntry[] = [];
+  private ringBuffers = new Map<string, LogEntry[]>();
+  private pendingWrites = new Set<Promise<void>>();
+  private pendingWriteErrors: unknown[] = [];
+  private disableGracefulShutdown?: () => void;
   public audit: AuditEngine;
   public ai: AiTracker;
 
@@ -56,12 +60,18 @@ export class AegisLogger {
     this.ai = new AiTracker(this, this.shield);
 
     if (options.gracefulShutdown) {
-      this.enableGracefulShutdown();
+      this.disableGracefulShutdown = this.enableGracefulShutdown();
     }
   }
 
   public async flush(): Promise<void> {
-    await Promise.allSettled(this.sinks.map((s) => s.flush?.()));
+    await Promise.all(this.pendingWrites);
+    await Promise.all(this.sinks.map((sink) => sink.flush?.()));
+
+    if (this.pendingWriteErrors.length > 0) {
+      const errors = this.pendingWriteErrors.splice(0);
+      throw new AggregateError(errors, "One or more log sinks failed");
+    }
   }
 
   public enableGracefulShutdown(): () => void {
@@ -69,21 +79,38 @@ export class AegisLogger {
       return () => {};
     }
 
-    const handler = async () => {
+    this.disableGracefulShutdown?.();
+    let shuttingDown = false;
+
+    const handleSignal = async (signal: NodeJS.Signals) => {
+      if (shuttingDown) {
+        return;
+      }
+      shuttingDown = true;
       try {
         await this.flush();
       } catch {
-        // Ensure process shutdown is not blocked
+        process.exitCode = 1;
+      }
+
+      cleanup();
+      process.kill(process.pid, signal);
+    };
+
+    const sigtermHandler = () => void handleSignal("SIGTERM");
+    const sigintHandler = () => void handleSignal("SIGINT");
+    process.on("SIGTERM", sigtermHandler);
+    process.on("SIGINT", sigintHandler);
+
+    const cleanup = () => {
+      process.off?.("SIGTERM", sigtermHandler);
+      process.off?.("SIGINT", sigintHandler);
+      if (this.disableGracefulShutdown === cleanup) {
+        this.disableGracefulShutdown = undefined;
       }
     };
-
-    process.on("SIGTERM", handler);
-    process.on("SIGINT", handler);
-
-    return () => {
-      process.off?.("SIGTERM", handler);
-      process.off?.("SIGINT", handler);
-    };
+    this.disableGracefulShutdown = cleanup;
+    return cleanup;
   }
 
   public addSink(sink: LogSink): this {
@@ -96,42 +123,82 @@ export class AegisLogger {
     return LOG_LEVEL_SEVERITY[level] >= LOG_LEVEL_SEVERITY[this.level];
   }
 
-  private emit(entry: LogEntry): void {
-    // If ring buffer is enabled and entry is below current level (e.g. debug while level is info)
-    if (this.ringBufferOptions.enabled && (entry.level === "debug" || entry.level === "trace")) {
-      this.ringBuffer.push(entry);
-      if (this.ringBuffer.length > (this.ringBufferOptions.capacity ?? 25)) {
-        this.ringBuffer.shift();
-      }
-      // If below threshold, don't output yet
-      if (!this.shouldLog(entry.level)) {
-        return;
+  private getRingBufferKey(entry?: LogEntry, requestId?: string): string {
+    return requestId ?? entry?.context?.requestId ?? AegisLogger.GLOBAL_RING_BUFFER_KEY;
+  }
+
+  private dispatch(entry: LogEntry): void {
+    for (const sink of this.sinks) {
+      try {
+        const result = sink.log(entry);
+        if (result instanceof Promise) {
+          const tracked = result
+            .catch((error: unknown) => {
+              this.pendingWriteErrors.push(error);
+            })
+            .finally(() => {
+              this.pendingWrites.delete(tracked);
+            });
+          this.pendingWrites.add(tracked);
+        }
+      } catch (error) {
+        this.pendingWriteErrors.push(error);
       }
     }
+  }
 
-    // Flush ring buffer on error if enabled
+  private flushBufferedEntries(requestId?: string): void {
+    const key = this.getRingBufferKey(undefined, requestId);
+    const buffered = this.ringBuffers.get(key) ?? [];
+    this.ringBuffers.delete(key);
+    for (const entry of buffered) {
+      this.dispatch(entry);
+    }
+  }
+
+  public completeRequest(statusCode: number, requestId?: string): void {
+    if (!this.ringBufferOptions.enabled) {
+      return;
+    }
+
+    const key = this.getRingBufferKey(undefined, requestId ?? getContext()?.requestId);
+    if (statusCode >= 400) {
+      this.flushBufferedEntries(key);
+    } else {
+      this.ringBuffers.delete(key);
+    }
+  }
+
+  private emit(entry: LogEntry): void {
+    if (
+      this.ringBufferOptions.enabled &&
+      !this.shouldLog(entry.level) &&
+      (entry.level === "debug" || entry.level === "trace")
+    ) {
+      const key = this.getRingBufferKey(entry);
+      const buffer = this.ringBuffers.get(key) ?? [];
+      buffer.push(entry);
+      if (buffer.length > (this.ringBufferOptions.capacity ?? 25)) {
+        buffer.shift();
+      }
+      this.ringBuffers.set(key, buffer);
+      return;
+    }
+
     if (
       this.ringBufferOptions.enabled &&
       this.ringBufferOptions.flushOnError &&
       (entry.level === "error" || entry.level === "fatal") &&
-      this.ringBuffer.length > 0
+      this.ringBuffers.has(this.getRingBufferKey(entry))
     ) {
-      const buffered = [...this.ringBuffer];
-      this.ringBuffer = [];
-      for (const bufEntry of buffered) {
-        for (const sink of this.sinks) {
-          sink.log(bufEntry);
-        }
-      }
+      this.flushBufferedEntries(this.getRingBufferKey(entry));
     }
 
     if (!this.shouldLog(entry.level)) {
       return;
     }
 
-    for (const sink of this.sinks) {
-      sink.log(entry);
-    }
+    this.dispatch(entry);
   }
 
   private createEntry(
@@ -142,10 +209,10 @@ export class AegisLogger {
   ): LogEntry {
     const ambientContext = getContext();
 
-    const mergedMeta: Record<string, unknown> = {
+    const mergedMeta = this.shield.sanitize<Record<string, unknown>>({
       ...this.defaultMeta,
-      ...(meta ? (this.shield.sanitize(meta) as Record<string, unknown>) : {}),
-    };
+      ...meta,
+    });
 
     return {
       level,
@@ -176,11 +243,11 @@ export class AegisLogger {
     this.emit(this.createEntry("warn", message, meta));
   }
 
-  public error(
+  private normalizeErrorArguments(
     messageOrError: string | Error,
     metaOrError?: Record<string, unknown> | Error,
     error?: Error,
-  ): void {
+  ): { message: string; meta?: Record<string, unknown>; error?: Error } {
     let message: string;
     let meta: Record<string, unknown> | undefined;
     let err: Error | undefined = error;
@@ -203,7 +270,16 @@ export class AegisLogger {
       }
     }
 
-    this.emit(this.createEntry("error", message, meta, err));
+    return { message, meta, error: err };
+  }
+
+  public error(
+    messageOrError: string | Error,
+    metaOrError?: Record<string, unknown> | Error,
+    error?: Error,
+  ): void {
+    const normalized = this.normalizeErrorArguments(messageOrError, metaOrError, error);
+    this.emit(this.createEntry("error", normalized.message, normalized.meta, normalized.error));
   }
 
   public fatal(
@@ -211,29 +287,8 @@ export class AegisLogger {
     metaOrError?: Record<string, unknown> | Error,
     error?: Error,
   ): void {
-    let message: string;
-    let meta: Record<string, unknown> | undefined;
-    let err: Error | undefined = error;
-
-    if (messageOrError instanceof Error) {
-      message = messageOrError.message;
-      err = messageOrError;
-      if (metaOrError && !(metaOrError instanceof Error) && typeof metaOrError === "object") {
-        meta = metaOrError;
-      }
-    } else {
-      message = String(messageOrError);
-      if (metaOrError instanceof Error) {
-        err = metaOrError;
-      } else if (metaOrError && typeof metaOrError === "object") {
-        meta = metaOrError;
-        if ("error" in meta && meta.error instanceof Error) {
-          err = meta.error;
-        }
-      }
-    }
-
-    this.emit(this.createEntry("fatal", message, meta, err));
+    const normalized = this.normalizeErrorArguments(messageOrError, metaOrError, error);
+    this.emit(this.createEntry("fatal", normalized.message, normalized.meta, normalized.error));
   }
 
   public event<TName extends string, TData>(
@@ -271,13 +326,17 @@ export class AegisLogger {
         : this.namespace
       : options.namespace;
 
-    return new AegisLogger({
+    const child = new AegisLogger({
       level: this.level,
       namespace: newNamespace,
       sinks: this.sinks,
       defaultMeta: { ...this.defaultMeta, ...options.defaultMeta },
       ringBuffer: this.ringBufferOptions,
     });
+    child.shield = this.shield;
+    child.audit = new AuditEngine(child.sinks, child.shield);
+    child.ai = new AiTracker(child, child.shield);
+    return child;
   }
 
   public with(meta: Record<string, unknown>): FluentLogBuilder {

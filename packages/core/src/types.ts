@@ -176,6 +176,7 @@ export interface DevDisplayOptions {
 export interface DevViewerSinkOptions {
   port?: number;
   host?: string;
+  token?: string;
 }
 
 export interface LoggerOptions {

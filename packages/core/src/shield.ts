@@ -7,6 +7,8 @@ const DEFAULT_SENSITIVE_KEYS = new Set([
   "secret",
   "token",
   "bearer",
+  "auth",
+  "auth_token",
   "authorization",
   "apikey",
   "api_key",
@@ -23,14 +25,28 @@ const DEFAULT_SENSITIVE_KEYS = new Set([
   "cvv",
   "cvc",
   "pan",
+  "accountnumber",
+  "routingnumber",
+  "iban",
   "ssn",
   "social_security",
+  "nationalid",
+  "passport",
+  "pin",
+  "dateofbirth",
+  "dob",
   "cookie",
   "set-cookie",
+  "session",
+  "sessionid",
   "session_token",
   "session_secret",
   "webhook_secret",
 ]);
+
+const NORMALIZED_SENSITIVE_KEYS = new Set(
+  [...DEFAULT_SENSITIVE_KEYS].map((key) => key.replace(/[-_]/g, "")),
+);
 
 const PRESET_KEYS: Record<string, string[]> = {
   hipaa: [
@@ -105,6 +121,7 @@ const CREDIT_CARD_REGEX = /\b(?:\d{4}[-\s]?){3}\d{4}\b/g;
 
 export class SecurityShield {
   private sensitiveKeys: Set<string>;
+  private normalizedSensitiveKeys: Set<string>;
   private maskString: string;
   private maxDepth: number;
   private maxStringLength: number;
@@ -159,11 +176,18 @@ export class SecurityShield {
         this.sensitiveKeys.add(key.toLowerCase());
       }
     }
+    this.normalizedSensitiveKeys = new Set(
+      [...this.sensitiveKeys].map((key) => key.replace(/[-_]/g, "")),
+    );
   }
 
   public isSensitiveKey(key: string): boolean {
     const normalized = key.toLowerCase().replace(/[-_]/g, "");
-    if (this.sensitiveKeys.has(key.toLowerCase()) || this.sensitiveKeys.has(normalized)) {
+    if (
+      this.sensitiveKeys.has(key.toLowerCase()) ||
+      NORMALIZED_SENSITIVE_KEYS.has(normalized) ||
+      this.normalizedSensitiveKeys.has(normalized)
+    ) {
       return true;
     }
     return (
@@ -231,15 +255,15 @@ export class SecurityShield {
       return "[MAX_DEPTH_EXCEEDED]";
     }
 
+    if (key && this.isSensitiveKey(key)) {
+      return this.maskString;
+    }
+
     if (this.customMasker && key) {
       const customResult = this.customMasker(key, val);
       if (customResult !== undefined) {
         return customResult;
       }
-    }
-
-    if (key && this.isSensitiveKey(key)) {
-      return this.maskString;
     }
 
     if (val === null || val === undefined) {
@@ -250,7 +274,11 @@ export class SecurityShield {
       return this.sanitizeString(val);
     }
 
-    if (typeof val === "number" || typeof val === "boolean" || typeof val === "bigint") {
+    if (typeof val === "bigint") {
+      return val.toString();
+    }
+
+    if (typeof val === "number" || typeof val === "boolean") {
       return val;
     }
 

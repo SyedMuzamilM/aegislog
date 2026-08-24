@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MemorySink } from "../src/sinks.js";
 import { createLogger } from "../src/logger.js";
 import { runWithContext, setActor, setTenant } from "../src/context.js";
 import { formatDevLog } from "../src/formatters/dev.js";
+import { formatJsonLog } from "../src/formatters/json.js";
 
 describe("AegisLog Core Engine", () => {
   it("logs messages and attaches metadata", () => {
@@ -91,6 +92,42 @@ describe("AegisLog Core Engine", () => {
     expect(user?.creditCard).toBe("[REDACTED]");
   });
 
+  it("sanitizes documented key variants and default metadata", () => {
+    const memory = new MemorySink();
+    const logger = createLogger({
+      sinks: [memory],
+      defaultMeta: { auth_token: "default-token", sessionId: "session-1" },
+    });
+
+    logger.info("Sensitive variants", {
+      accountNumber: "123456",
+      routing_number: "987654",
+      passport: "P1234",
+    });
+
+    expect(memory.entries[0]?.meta).toEqual({
+      auth_token: "[REDACTED]",
+      sessionId: "[REDACTED]",
+      accountNumber: "[REDACTED]",
+      routing_number: "[REDACTED]",
+      passport: "[REDACTED]",
+    });
+  });
+
+  it("keeps custom shield rules on child loggers", () => {
+    const memory = new MemorySink();
+    const logger = createLogger({
+      sinks: [memory],
+      shield: { additionalKeys: ["customerTaxId"] },
+    });
+
+    logger.child({ namespace: "billing" }).info("Child event", {
+      customerTaxId: "tax-123",
+    });
+
+    expect(memory.entries[0]?.meta?.customerTaxId).toBe("[REDACTED]");
+  });
+
   it("safely handles circular references without crashing or throwing", () => {
     const memory = new MemorySink();
     const logger = createLogger({ sinks: [memory] });
@@ -134,6 +171,28 @@ describe("AegisLog Core Engine", () => {
     expect(record?.outcome).toBe("success");
   });
 
+  it("sanitizes and snapshots complete audit records", async () => {
+    const memory = new MemorySink();
+    const logger = createLogger({ sinks: [memory] });
+    const resource = { type: "user", id: "usr_1", password: "secret" };
+
+    await logger.audit.record({
+      action: "user.updated",
+      resource,
+      actor: { id: "admin", auth_token: "actor-secret" },
+      target: { type: "session", id: "session-1", sessionId: "secret-session" },
+      reason: "Authorization: Bearer abcdefghijklmnop",
+    });
+    resource.id = "mutated";
+
+    const record = memory.auditRecords[0];
+    expect(record?.resource.id).toBe("usr_1");
+    expect(record?.resource.password).toBe("[REDACTED]");
+    expect(record?.actor?.auth_token).toBe("[REDACTED]");
+    expect(record?.target?.sessionId).toBe("[REDACTED]");
+    expect(record?.reason).not.toContain("abcdefghijklmnop");
+  });
+
   it("flushes in-memory ring buffer on error (Debug-on-Error)", () => {
     const memory = new MemorySink();
     const logger = createLogger({
@@ -152,6 +211,39 @@ describe("AegisLog Core Engine", () => {
     expect(memory.entries[0]?.message).toBe("Step 1: Parse request");
     expect(memory.entries[1]?.message).toBe("Step 2: Connect DB");
     expect(memory.entries[2]?.message).toBe("Step 3: DB connection dropped!");
+  });
+
+  it("isolates ring buffers by request and discards successful request trails", () => {
+    const memory = new MemorySink();
+    const logger = createLogger({
+      level: "info",
+      sinks: [memory],
+      ringBuffer: { enabled: true, capacity: 10, flushOnError: true },
+    });
+
+    runWithContext({ requestId: "request-a" }, () => logger.debug("request-a debug"));
+    runWithContext({ requestId: "request-b" }, () => logger.debug("request-b debug"));
+    logger.completeRequest(200, "request-a");
+    runWithContext({ requestId: "request-b" }, () => logger.error("request-b error"));
+
+    expect(memory.entries.map((entry) => entry.message)).toEqual([
+      "request-b debug",
+      "request-b error",
+    ]);
+  });
+
+  it("flushes a request ring buffer for a 4xx completion", () => {
+    const memory = new MemorySink();
+    const logger = createLogger({
+      level: "info",
+      sinks: [memory],
+      ringBuffer: { enabled: true },
+    });
+
+    runWithContext({ requestId: "request-denied" }, () => logger.debug("authorization check"));
+    logger.completeRequest(403, "request-denied");
+
+    expect(memory.entries[0]?.message).toBe("authorization check");
   });
 
   it("customizes console display with DevDisplayOptions (Helmet for console)", () => {
@@ -274,6 +366,32 @@ describe("AegisLog Core Engine", () => {
     const cleanup = logger.enableGracefulShutdown();
     expect(typeof cleanup).toBe("function");
     cleanup();
+  });
+
+  it("flushes, restores signal handling, and re-sends the shutdown signal", async () => {
+    const flush = vi.fn(async () => {});
+    const logger = createLogger({ sinks: [{ name: "shutdown", log: () => {}, flush }] });
+    const kill = vi.spyOn(process, "kill").mockImplementation((() => true) as typeof process.kill);
+    const cleanup = logger.enableGracefulShutdown();
+    const handler = process.listeners("SIGTERM").at(-1);
+
+    expect(handler).toBeDefined();
+    handler?.("SIGTERM");
+    await vi.waitFor(() => expect(kill).toHaveBeenCalledWith(process.pid, "SIGTERM"));
+    expect(flush).toHaveBeenCalled();
+
+    cleanup();
+    kill.mockRestore();
+  });
+
+  it("serializes bigint metadata as a decimal string", () => {
+    const memory = new MemorySink();
+    const logger = createLogger({ sinks: [memory] });
+
+    logger.info("BigInt metadata", { value: 42n });
+
+    expect(memory.entries[0]?.meta?.value).toBe("42");
+    expect(() => formatJsonLog(memory.entries[0]!)).not.toThrow();
   });
 
   it("flexibly accepts Error instances as first parameter or in meta", () => {

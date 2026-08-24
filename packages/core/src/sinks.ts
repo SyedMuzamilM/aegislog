@@ -79,27 +79,45 @@ export class MemorySink implements LogSink {
 export class DevViewerSink implements LogSink {
   public name = "dev-viewer";
   private url: string;
+  private token?: string;
+  private pending = new Set<Promise<void>>();
 
-  constructor(options: { port?: number; host?: string } = {}) {
+  constructor(options: { port?: number; host?: string; token?: string } = {}) {
     const port = options.port ?? 4319;
     const host = options.host ?? "127.0.0.1";
     this.url = `http://${host}:${port}/api/events`;
+    this.token = options.token;
   }
 
   public log(entry: LogEntry): void {
-    void this.send(entry);
+    this.enqueue(entry);
   }
 
   public logAudit(record: AuditRecord): void {
-    void this.send(record);
+    this.enqueue(record);
+  }
+
+  public async flush(): Promise<void> {
+    await Promise.all(this.pending);
+  }
+
+  private enqueue(payload: unknown): void {
+    const request = this.send(payload).finally(() => {
+      this.pending.delete(request);
+    });
+    this.pending.add(request);
   }
 
   private async send(payload: unknown): Promise<void> {
     try {
       if (typeof fetch !== "undefined") {
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (this.token) {
+          headers.Authorization = `Bearer ${this.token}`;
+        }
         await fetch(this.url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify(payload),
         });
       }

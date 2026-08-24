@@ -14,7 +14,7 @@ export class AuditEngine {
   public async record(record: AuditRecord): Promise<void> {
     const ambient = getContext();
 
-    const fullRecord: AuditRecord = {
+    const fullRecord = this.shield.sanitize<AuditRecord>({
       eventId: record.eventId ?? `aud_${generateId()}`,
       timestamp: record.timestamp ?? new Date().toISOString(),
       action: record.action,
@@ -32,12 +32,18 @@ export class AuditEngine {
         : undefined,
       reason: record.reason,
       outcome: record.outcome ?? "success",
-    };
+    });
 
-    for (const sink of this.sinks) {
-      if (sink.logAudit) {
-        await sink.logAudit(fullRecord);
-      }
+    const results = await Promise.allSettled(
+      this.sinks
+        .filter((sink) => sink.logAudit)
+        .map((sink) => Promise.resolve().then(() => sink.logAudit?.(fullRecord))),
+    );
+    const errors = results
+      .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+      .map((result) => result.reason);
+    if (errors.length > 0) {
+      throw new AggregateError(errors, "One or more audit sinks failed");
     }
   }
 }
