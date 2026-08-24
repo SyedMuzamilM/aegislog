@@ -36,6 +36,10 @@ describe("AegisLog AI Tracker", () => {
     expect(usage?.completionTokens).toBe(200);
     expect(usage?.totalTokens).toBe(1200);
     expect(usage?.estimatedCostUsd).toBeGreaterThan(0);
+    expect(meta?.messages).toEqual([
+      { role: "user", content: "Please summarize customer feedback." },
+    ]);
+    expect(meta?.completion).toBe("Here is the summary.");
   });
 
   it("redacts sensitive PII in AI prompts and messages", async () => {
@@ -64,6 +68,27 @@ describe("AegisLog AI Tracker", () => {
     const messages = meta?.messages as Array<{ content: string }>;
     expect(messages[0]?.content).toContain("****-****-****-4444");
     expect(messages[0]?.content).toContain("sk-[REDACTED_KEY]");
+  });
+
+  it("extracts and sanitizes Anthropic and custom completion shapes", async () => {
+    const memory = new MemorySink();
+    const logger = createLogger({ sinks: [memory] });
+
+    await logger.ai.track({
+      model: "claude-3-5-sonnet",
+      call: async () => ({
+        content: [{ type: "text", text: "Bearer abcdefghijklmnop" }],
+      }),
+    });
+    await logger.ai.track({
+      model: "custom-model",
+      extractCompletion: (result) => result.answer,
+      call: async () => ({ answer: "Custom completion" }),
+    });
+
+    const successLogs = memory.entries.filter((entry) => entry.message.includes("[AI:Success]"));
+    expect(successLogs[0]?.meta?.completion).toBe("Bearer [REDACTED_TOKEN]");
+    expect(successLogs[1]?.meta?.completion).toBe("Custom completion");
   });
 
   it("captures errors and logs them with latency", async () => {

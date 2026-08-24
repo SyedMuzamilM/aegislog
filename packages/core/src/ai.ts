@@ -41,6 +41,7 @@ export interface AiTrackOptions<T> {
   prompt?: string;
   meta?: Record<string, unknown>;
   pricing?: AiPricing;
+  extractCompletion?: (result: T) => unknown;
   call: () => Promise<T>;
 }
 
@@ -50,6 +51,60 @@ export interface AiTrackResult<T> {
   durationMs: number;
   model: string;
   provider: string;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : undefined;
+}
+
+function readText(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    const parts = value.map((item) => readText(asRecord(item)?.text ?? item)).filter(Boolean);
+    return parts.length > 0 ? parts.join("") : undefined;
+  }
+  return undefined;
+}
+
+function extractCommonCompletion(result: unknown): unknown {
+  const response = asRecord(result);
+  if (!response) {
+    return undefined;
+  }
+
+  const direct =
+    readText(response.output_text) ??
+    readText(response.output) ??
+    readText(response.text) ??
+    readText(response.completion);
+  if (direct) {
+    return direct;
+  }
+
+  const firstChoice = Array.isArray(response.choices) ? asRecord(response.choices[0]) : undefined;
+  const choiceMessage = asRecord(firstChoice?.message);
+  const openAiCompletion = readText(choiceMessage?.content) ?? readText(firstChoice?.text);
+  if (openAiCompletion) {
+    return openAiCompletion;
+  }
+
+  const anthropicCompletion = readText(response.content);
+  if (anthropicCompletion) {
+    return anthropicCompletion;
+  }
+
+  const firstCandidate = Array.isArray(response.candidates)
+    ? asRecord(response.candidates[0])
+    : undefined;
+  const candidateContent = asRecord(firstCandidate?.content);
+  return readText(candidateContent?.parts);
+}
+
+function readTokenCount(value: unknown): number {
+  const count = Number(value ?? 0);
+  return Number.isFinite(count) && count >= 0 ? count : 0;
 }
 
 export class AiTracker {
@@ -98,6 +153,7 @@ export class AiTracker {
     this.logger.info(
       `[AI:Call] ${provider}:${options.model} (${totalTokens} tokens, ~$${cost}, ${duration}ms)`,
       {
+        ...options.meta,
         provider,
         model: options.model,
         durationMs: duration,
@@ -109,7 +165,6 @@ export class AiTracker {
           totalTokens,
           estimatedCostUsd: cost,
         },
-        ...options.meta,
       },
     );
   }
@@ -144,13 +199,13 @@ export class AiTracker {
         const usage = (anyRes.usage || anyRes.usageMetadata) as Record<string, unknown> | undefined;
 
         if (usage) {
-          promptTokens = Number(
+          promptTokens = readTokenCount(
             usage.prompt_tokens ?? usage.promptTokenCount ?? usage.input_tokens ?? 0,
           );
-          completionTokens = Number(
+          completionTokens = readTokenCount(
             usage.completion_tokens ?? usage.candidatesTokenCount ?? usage.output_tokens ?? 0,
           );
-          totalTokens = Number(
+          totalTokens = readTokenCount(
             usage.total_tokens ?? usage.totalTokenCount ?? promptTokens + completionTokens,
           );
         }
@@ -163,6 +218,11 @@ export class AiTracker {
         totalTokens,
         estimatedCostUsd: cost,
       };
+      const completion = options.extractCompletion
+        ? options.extractCompletion(result)
+        : extractCommonCompletion(result);
+      const sanitizedCompletion =
+        completion === undefined ? undefined : this.shield.sanitize(completion);
 
       this.logger.info(
         `[AI:Success] ${provider}:${model} (${totalTokens} tokens, ~$${cost}, ${durationMs}ms)`,
@@ -171,6 +231,9 @@ export class AiTracker {
           model,
           durationMs,
           usage: usageInfo,
+          prompt: sanitizedPrompt,
+          messages: sanitizedMessages,
+          completion: sanitizedCompletion,
           meta: options.meta,
         },
       );
