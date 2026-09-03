@@ -1,15 +1,32 @@
 # @aegislog/transports
 
+## 0.2.4
+
+### Patch Changes
+
+- Add native Grafana Loki transport (`LokiBatchSink` / `GrafanaLokiSink`):
+
+  - High-throughput batched ingestion into Grafana Loki via `/loki/api/v1/push`.
+  - Automatic stream grouping by labels and monotonic nanosecond timestamps.
+  - Low-cardinality index labels with structured JSON payload for LogQL `| json` querying.
+  - Native compliance audit trail indexing (`type: "audit"`, `action`, `outcome`).
+  - Support for Grafana Cloud Basic Auth, Bearer tokens, and multi-tenant `X-Scope-OrgID`.
+  - Built-in LogQL query engine (`lokiSink.query()`) for historical log retrieval.
+  - Pre-configured Grafana dashboard and Docker Compose setup in examples.
+
+- aegislog@0.2.4
+
 ## 0.2.3
 
 ### Patch Changes
 
 - c189aaa: Prevent buffered logs from being silently lost during transport failures:
-  
+
   - Keep HTTP, OpenTelemetry, and MongoDB batches queued until delivery succeeds, including while another flush is in flight.
   - Reject manual flushes on failed requests or inserts so applications can detect delivery failures.
   - Preserve structured metadata, errors, tags, actor, tenant, session, and audit records in OTLP exports.
   - Validate MongoDB sink configuration and escape literal text used by the historical log search helper.
+
 - Updated dependencies [c189aaa]
   - aegislog@0.2.3
 

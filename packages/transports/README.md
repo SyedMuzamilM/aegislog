@@ -2,6 +2,7 @@
 
 Production transports and ingestion sinks for [AegisLog](https://github.com/syedmuzamilm/aegislog).
 
+- 📊 **`LokiBatchSink` / `GrafanaLokiSink`**: Batched buffer queue pushing to Grafana Loki `/loki/api/v1/push` with LogQL query engine (`lokiSink.query`).
 - 🍃 **`MongoBatchSink`**: Batched buffer queue writing into MongoDB via `insertMany({ ordered: false })`.
 - 📡 **`OpenTelemetrySink`**: Native OpenTelemetry OTLP `/v1/logs` HTTP transport.
 - ⚡ **`HttpBatchSink` / `AxiomSink`**: Batched HTTP log ingestion with periodic timer flushes.
@@ -52,5 +53,31 @@ const otelSink = new OpenTelemetrySink({
 
 const logger = createLogger({
   sinks: [otelSink],
+});
+```
+
+### Grafana & Grafana Loki Batched Sink & LogQL Engine
+
+```typescript
+import { createLogger } from "aegislog";
+import { LokiBatchSink } from "@aegislog/transports";
+
+const lokiSink = new LokiBatchSink({
+  host: "http://localhost:3100", // Or https://logs-prod-us-central1.grafana.net
+  labels: { app: "order-service", env: "production" },
+  batchSize: 50,
+  flushIntervalMs: 2000,
+});
+
+const logger = createLogger({
+  sinks: [lokiSink],
+  gracefulShutdown: true,
+});
+
+// Query historical logs using LogQL directly from Node.js
+const { items, total } = await lokiSink.query({
+  level: "error",
+  search: "payment failed",
+  limit: 20,
 });
 ```

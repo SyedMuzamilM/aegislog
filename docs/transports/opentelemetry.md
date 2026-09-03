@@ -2,6 +2,9 @@
 
 The `@aegislog/transports` package provides native OpenTelemetry OTLP `/v1/logs` HTTP ingestion and high-throughput batching sinks for services like **Datadog**, **Grafana Loki**, **Axiom**, and **Honeycomb**.
 
+> [!NOTE]
+> For direct HTTP push to Grafana Loki with automatic stream labels and LogQL queries, see the dedicated [Grafana & Grafana Loki Guide](./grafana-loki.md).
+
 ---
 
 ## 📦 Installation

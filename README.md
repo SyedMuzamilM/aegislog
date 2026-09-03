@@ -23,7 +23,7 @@
 - 🛡️ **Helmet Security Shield:** Built-in redaction for passwords, Bearer tokens, JWTs, OpenAI/AWS keys, credit cards, and domain compliance presets (`hipaa`, `pci`, `financial`, `strict`) at roughly 1.6 µs per complex payload in the included benchmark.
 - 🌐 **Ambient Context Engine:** Zero parameter drilling. Automatically attaches `actor` (user), `tenant` (org), and `requestId` across asynchronous call stacks via `AsyncLocalStorage`.
 - 📜 **Business Audit Trails:** First-class `audit.record()` engine for structured SOC2/HIPAA/GDPR events separate from ephemeral debug noise. Pair it with append-only storage when immutable retention is required.
-- 🍃 **Cloud & DB Transports:** Native OpenTelemetry OTLP `/v1/logs`, high-throughput batched MongoDB / Mongoose transport with historical query API (`mongoSink.query`), and Axiom sinks.
+- 🍃 **Cloud & DB Transports:** Native Grafana Loki transport with LogQL query engine (`lokiSink.query`), OpenTelemetry OTLP `/v1/logs`, high-throughput batched MongoDB / Mongoose transport (`mongoSink.query`), and Axiom sinks.
 - 🛑 **Native Graceful Shutdown:** Automated buffer draining on `SIGTERM` and `SIGINT` via `gracefulShutdown: true`.
 - 🎨 **Customizable Console Display:** Syntax-colored JSON metadata, clean error stack traces, and configurable presets (`default`, `minimal`, `compact`, `detailed`).
 - 🤖 **AI / LLM Observability:** Built-in `ai.track()` measuring prompts, completions, tokens, latency, and estimated USD cost (GPT-4o, Claude 3.5, Gemini 2.0, DeepSeek R1).
@@ -49,15 +49,15 @@ Executed with `pnpm bench` (Apple Silicon M-Series):
 
 ## 📦 Packages in Monorepo
 
-| Package                                         | Version | Description                                                   |
-| :---------------------------------------------- | :------ | :------------------------------------------------------------ |
-| [`aegislog`](./packages/core)                   | `0.2.2` | Core logging, context, shield, audit, and AI tracking engine  |
-| [`@aegislog/next`](./packages/next)             | `0.2.2` | Next.js App Router context wrapper & Server Action loggers    |
-| [`@aegislog/hono`](./packages/hono)             | `0.2.2` | Hono & Cloudflare Workers edge middleware adapter             |
-| [`@aegislog/fastify`](./packages/fastify)       | `0.2.2` | Fastify v4/v5 plugin adapter with global hooks                |
-| [`@aegislog/express`](./packages/express)       | `0.2.2` | Express request/response lifecycle middleware                 |
-| [`@aegislog/transports`](./packages/transports) | `0.2.2` | OpenTelemetry OTLP `/v1/logs`, MongoDB, and Axiom cloud sinks |
-| [`@aegislog/dev`](./packages/dev)               | `0.2.2` | Standalone local visual web dashboard & CLI inspector         |
+| Package                                         | Version | Description                                                           |
+| :---------------------------------------------- | :------ | :-------------------------------------------------------------------- |
+| [`aegislog`](./packages/core)                   | `0.2.4` | Core logging, context, shield, audit, and AI tracking engine          |
+| [`@aegislog/next`](./packages/next)             | `0.2.4` | Next.js App Router context wrapper & Server Action loggers            |
+| [`@aegislog/hono`](./packages/hono)             | `0.2.4` | Hono & Cloudflare Workers edge middleware adapter                     |
+| [`@aegislog/fastify`](./packages/fastify)       | `0.2.4` | Fastify v4/v5 plugin adapter with global hooks                        |
+| [`@aegislog/express`](./packages/express)       | `0.2.4` | Express request/response lifecycle middleware                         |
+| [`@aegislog/transports`](./packages/transports) | `0.2.4` | Grafana Loki, MongoDB, OpenTelemetry OTLP `/v1/logs`, and Axiom sinks |
+| [`@aegislog/dev`](./packages/dev)               | `0.2.4` | Standalone local visual web dashboard & CLI inspector                 |
 
 ---
 
@@ -191,6 +191,8 @@ Open `http://localhost:4319` in your browser to inspect logs and audit streams i
 - [Hono & Cloudflare Workers Guide](./docs/frameworks/hono-and-cloudflare.md)
 - [Fastify Plugin Guide](./docs/frameworks/fastify.md)
 - [Express Middleware Guide](./docs/frameworks/express.md)
+- [Grafana & Grafana Loki Transport](./docs/transports/grafana-loki.md)
+- [MongoDB Batched Transport](./docs/transports/mongodb.md)
 - [OpenTelemetry OTLP Cloud Transports](./docs/transports/opentelemetry.md)
 - [Localhost Dev Inspector](./docs/dev-inspector.md)
 

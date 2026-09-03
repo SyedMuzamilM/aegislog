@@ -93,6 +93,22 @@ importers:
         specifier: ^4.19.2
         version: 4.23.12
 
+  examples/grafana-loki:
+    dependencies:
+      '@aegislog/transports':
+        specifier: workspace:*
+        version: link:../../packages/transports
+      aegislog:
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.13.4
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.12
+
   examples/hono-app:
     dependencies:
       '@aegislog/hono':

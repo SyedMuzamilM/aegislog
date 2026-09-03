@@ -3,6 +3,7 @@ import { createLogger } from "aegislog";
 import { OpenTelemetrySink } from "../src/otel.js";
 import { HttpBatchSink } from "../src/http.js";
 import { MongoBatchSink } from "../src/mongo.js";
+import { LokiBatchSink, GrafanaLokiSink } from "../src/loki.js";
 
 describe("AegisLog Transports", () => {
   it("batches and flushes OpenTelemetry OTLP log entries", async () => {
@@ -227,5 +228,215 @@ describe("AegisLog Transports", () => {
     expect(result.items.length).toBeGreaterThanOrEqual(2);
     expect(result.total).toBeGreaterThanOrEqual(2);
     expect(result.page).toBe(1);
+  });
+
+  it("batches and pushes formatted streams to Grafana Loki API (/loki/api/v1/push)", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => new Response(null, { status: 204 }));
+
+    const lokiSink = new LokiBatchSink({
+      host: "http://localhost:3100",
+      labels: { app: "payments-service", env: "production" },
+      batchSize: 2,
+    });
+
+    const logger = createLogger({ sinks: [lokiSink] });
+
+    logger.info("Order initialized", { orderId: "ord_101" });
+    logger.error("Payment gateway timeout", { orderId: "ord_101", error: new Error("ETIMEDOUT") });
+
+    await lokiSink.flush();
+
+    expect(fetchSpy).toHaveBeenCalled();
+    const [url, requestInit] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("http://localhost:3100/loki/api/v1/push");
+    expect(requestInit.method).toBe("POST");
+
+    const payload = JSON.parse(requestInit.body as string);
+    expect(payload.streams).toBeDefined();
+    // 2 streams: one for level=info and one for level=error
+    expect(payload.streams.length).toBe(2);
+
+    const infoStream = payload.streams.find(
+      (s: any) => s.stream.level === "info" && s.stream.app === "payments-service",
+    );
+    expect(infoStream).toBeDefined();
+    expect(infoStream.values[0][1]).toContain("Order initialized");
+    expect(infoStream.values[0][1]).toContain("ord_101");
+
+    const errorStream = payload.streams.find(
+      (s: any) => s.stream.level === "error" && s.stream.app === "payments-service",
+    );
+    expect(errorStream).toBeDefined();
+    expect(errorStream.values[0][1]).toContain("Payment gateway timeout");
+
+    // Also verify GrafanaLokiSink alias
+    expect(GrafanaLokiSink).toBe(LokiBatchSink);
+
+    fetchSpy.mockRestore();
+  });
+
+  it("handles audit trails with dedicated audit labels in Loki", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => new Response(null, { status: 204 }));
+
+    const lokiSink = new LokiBatchSink({
+      host: "http://localhost:3100",
+      labels: { app: "auth-service" },
+    });
+
+    const logger = createLogger({ sinks: [lokiSink] });
+
+    await logger.audit.record({
+      action: "user.role_promoted",
+      resource: { type: "user", id: "usr_99" },
+      outcome: "success",
+    });
+
+    await lokiSink.flush();
+
+    expect(fetchSpy).toHaveBeenCalled();
+    const [, requestInit] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const payload = JSON.parse(requestInit.body as string);
+
+    const auditStream = payload.streams.find((s: any) => s.stream.type === "audit");
+    expect(auditStream).toBeDefined();
+    expect(auditStream.stream.action).toBe("user_role_promoted");
+    expect(auditStream.stream.outcome).toBe("success");
+    expect(auditStream.values[0][1]).toContain("[AUDIT] user.role_promoted on user:usr_99");
+
+    fetchSpy.mockRestore();
+  });
+
+  it("supports multi-tenancy and authentication for Grafana Cloud", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => new Response(null, { status: 204 }));
+
+    const lokiSink = new LokiBatchSink({
+      host: "https://logs-prod-us-central1.grafana.net",
+      tenantId: "tenant_acme_prod",
+      basicAuth: {
+        username: "12345",
+        password: "glc_secret_token",
+      },
+    });
+
+    lokiSink.log({
+      level: "info",
+      message: "Grafana cloud test",
+      timestamp: new Date().toISOString(),
+    });
+
+    await lokiSink.flush();
+
+    expect(fetchSpy).toHaveBeenCalled();
+    const [url, requestInit] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://logs-prod-us-central1.grafana.net/loki/api/v1/push");
+
+    const headers = requestInit.headers as Record<string, string>;
+    expect(headers["X-Scope-OrgID"]).toBe("tenant_acme_prod");
+    expect(headers.Authorization).toBe(
+      `Basic ${Buffer.from("12345:glc_secret_token").toString("base64")}`,
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it("triggers onError callback and retains failed entries upon HTTP error", async () => {
+    const onErrorSpy = vi.fn();
+    let shouldFail = true;
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      if (shouldFail) {
+        return new Response("Service Unavailable", {
+          status: 503,
+          statusText: "Service Unavailable",
+        });
+      }
+      return new Response(null, { status: 204 });
+    });
+
+    const lokiSink = new LokiBatchSink({
+      host: "http://localhost:3100",
+      onError: onErrorSpy,
+    });
+
+    lokiSink.log({
+      level: "error",
+      message: "Database down",
+      timestamp: new Date().toISOString(),
+    });
+
+    await expect(lokiSink.flush()).rejects.toThrow("HTTP 503");
+    expect(onErrorSpy).toHaveBeenCalledTimes(1);
+    expect(onErrorSpy.mock.calls[0][0].message).toContain("HTTP 503");
+    expect(onErrorSpy.mock.calls[0][1][0].message).toBe("Database down");
+
+    // Next flush succeeds and retains entry
+    shouldFail = false;
+    await lokiSink.flush();
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+    fetchSpy.mockRestore();
+  });
+
+  it("queries historical logs using LogQL via lokiSink.query helper", async () => {
+    const mockLokiResponse = {
+      status: "success",
+      data: {
+        resultType: "streams",
+        result: [
+          {
+            stream: { app: "aegislog", level: "error" },
+            values: [
+              [
+                "1725340000000000000",
+                JSON.stringify({
+                  timestamp: "2026-09-03T00:00:00.000Z",
+                  level: "error",
+                  message: "Connection pool exhausted",
+                  context: { actor: { id: "usr_sarah" }, requestId: "req_99" },
+                }),
+              ],
+            ],
+          },
+        ],
+      },
+    };
+
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => new Response(JSON.stringify(mockLokiResponse)));
+
+    const lokiSink = new LokiBatchSink({
+      host: "http://localhost:3100",
+      labels: { app: "aegislog" },
+    });
+
+    const result = await lokiSink.query({
+      level: "error",
+      search: "Connection pool",
+      actorId: "usr_sarah",
+      limit: 10,
+    });
+
+    expect(fetchSpy).toHaveBeenCalled();
+    const [requestUrl] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const parsedUrl = new URL(requestUrl);
+    expect(parsedUrl.pathname).toBe("/loki/api/v1/query_range");
+    expect(parsedUrl.searchParams.get("query")).toContain('{app="aegislog", level="error"}');
+    expect(parsedUrl.searchParams.get("query")).toContain('|= "Connection pool"');
+    expect(parsedUrl.searchParams.get("query")).toContain('|= "usr_sarah"');
+    expect(parsedUrl.searchParams.get("limit")).toBe("10");
+
+    expect(result.items.length).toBe(1);
+    expect(result.items[0].line).toContain("Connection pool exhausted");
+    expect(result.items[0].data?.message).toBe("Connection pool exhausted");
+    expect(result.items[0].labels.level).toBe("error");
+
+    fetchSpy.mockRestore();
   });
 });

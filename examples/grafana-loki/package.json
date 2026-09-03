@@ -1,0 +1,19 @@
+{
+  "name": "example-grafana-loki",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx index.ts",
+    "compose:up": "docker compose up -d",
+    "compose:down": "docker compose down"
+  },
+  "dependencies": {
+    "@aegislog/transports": "workspace:*",
+    "aegislog": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "tsx": "^4.19.2"
+  }
+}
