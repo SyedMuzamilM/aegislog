@@ -3,6 +3,7 @@
 Production transports and ingestion sinks for [AegisLog](https://github.com/syedmuzamilm/aegislog).
 
 - 📊 **`LokiBatchSink` / `GrafanaLokiSink`**: Batched buffer queue pushing to Grafana Loki `/loki/api/v1/push` with LogQL query engine (`lokiSink.query`).
+- 📈 **`PrometheusMetricsSink`**: Zero-dependency Prometheus exposition format exporter tracking log volumes, error counters, compliance audits, and AI token/cost metrics.
 - 🍃 **`MongoBatchSink`**: Batched buffer queue writing into MongoDB via `insertMany({ ordered: false })`.
 - 📡 **`OpenTelemetrySink`**: Native OpenTelemetry OTLP `/v1/logs` HTTP transport.
 - ⚡ **`HttpBatchSink` / `AxiomSink`**: Batched HTTP log ingestion with periodic timer flushes.
@@ -79,5 +80,24 @@ const { items, total } = await lokiSink.query({
   level: "error",
   search: "payment failed",
   limit: 20,
+});
+```
+
+### Prometheus Metrics Sink (Zero-Dependency Exposition)
+
+```typescript
+import express from "express";
+import { createLogger } from "aegislog";
+import { PrometheusMetricsSink } from "@aegislog/transports";
+
+const app = express();
+const metricsSink = new PrometheusMetricsSink();
+const logger = createLogger({ sinks: [metricsSink] });
+
+logger.info("Order processed");
+
+// Expose standard Prometheus /metrics endpoint
+app.get("/metrics", (_req, res) => {
+  res.type(metricsSink.contentType).send(metricsSink.getMetrics());
 });
 ```

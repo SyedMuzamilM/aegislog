@@ -5,6 +5,7 @@ import {
   type TenantContext,
   generateId,
   logger as defaultLogger,
+  parseTraceParent,
   runWithContext,
   type AegisLogger,
 } from "aegislog";
@@ -34,7 +35,11 @@ async function aegisFastifyPluginFn(
 
       const rawTraceHeader = req.headers["traceparent"] || req.headers["x-trace-id"];
       const traceHeader = Array.isArray(rawTraceHeader) ? rawTraceHeader[0] : rawTraceHeader;
-      const traceId = traceHeader ? traceHeader.split("-")[1] || traceHeader : undefined;
+      const parsedTrace = traceHeader ? parseTraceParent(traceHeader) : undefined;
+      const traceId =
+        parsedTrace?.traceId ??
+        (traceHeader ? traceHeader.split("-")[1] || traceHeader : undefined);
+      const spanId = parsedTrace?.spanId;
       const ip = req.ip || (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim();
       const userAgent = req.headers["user-agent"] as string;
 
@@ -58,6 +63,7 @@ async function aegisFastifyPluginFn(
             {
               requestId,
               traceId,
+              spanId,
               actor,
               tenant,
               session: { id: requestId, ip, userAgent },

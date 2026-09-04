@@ -5,6 +5,7 @@ import {
   type TenantContext,
   generateId,
   logger,
+  parseTraceParent,
   runWithContext,
 } from "aegislog";
 
@@ -28,7 +29,10 @@ export function aegisExpressMiddleware(
 
     const rawTraceHeader = req.headers["traceparent"] || req.headers["x-trace-id"];
     const traceHeader = Array.isArray(rawTraceHeader) ? rawTraceHeader[0] : rawTraceHeader;
-    const traceId = traceHeader ? traceHeader.split("-")[1] || traceHeader : undefined;
+    const parsedTrace = traceHeader ? parseTraceParent(traceHeader) : undefined;
+    const traceId =
+      parsedTrace?.traceId ?? (traceHeader ? traceHeader.split("-")[1] || traceHeader : undefined);
+    const spanId = parsedTrace?.spanId;
 
     const ip =
       (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
@@ -50,6 +54,7 @@ export function aegisExpressMiddleware(
       {
         requestId,
         traceId,
+        spanId,
         actor,
         tenant,
         session: { id: requestId, ip, userAgent },

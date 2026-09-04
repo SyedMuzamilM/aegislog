@@ -74,6 +74,73 @@ export function setData(key: string, value: unknown): void {
   }
 }
 
+export function setTraceId(traceId: string): void {
+  const store = contextStorage.getStore();
+  if (store) {
+    store.traceId = traceId;
+  }
+}
+
+export function getTraceId(): string | undefined {
+  return contextStorage.getStore()?.traceId;
+}
+
+export function setSpanId(spanId: string): void {
+  const store = contextStorage.getStore();
+  if (store) {
+    store.spanId = spanId;
+  }
+}
+
+export function getSpanId(): string | undefined {
+  return contextStorage.getStore()?.spanId;
+}
+
+const W3C_TRACEPARENT_REGEX = /^([0-9a-f]{2})-([0-9a-f]{32})-([0-9a-f]{16})-([0-9a-f]{2})$/i;
+
+export interface ParsedTraceContext {
+  traceId: string;
+  spanId: string;
+  sampled: boolean;
+}
+
+export function parseTraceParent(header?: string): ParsedTraceContext | undefined {
+  if (!header || typeof header !== "string") return undefined;
+
+  const match = header.trim().match(W3C_TRACEPARENT_REGEX);
+  if (!match) return undefined;
+
+  const [, _version, traceId, spanId, flags] = match;
+  if (
+    !traceId ||
+    !spanId ||
+    !flags ||
+    traceId === "00000000000000000000000000000000" ||
+    spanId === "0000000000000000"
+  ) {
+    return undefined;
+  }
+
+  const sampled = (Number.parseInt(flags, 16) & 0x01) === 1;
+
+  return {
+    traceId,
+    spanId,
+    sampled,
+  };
+}
+
+export function formatTraceParent(traceId: string, spanId?: string, sampled = true): string {
+  const validSpanId =
+    spanId && /^[0-9a-f]{16}$/i.test(spanId)
+      ? spanId
+      : typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID().replace(/-/g, "").slice(0, 16)
+        : Math.random().toString(16).slice(2, 18).padEnd(16, "0");
+
+  return `00-${traceId}-${validSpanId}-${sampled ? "01" : "00"}`;
+}
+
 export interface ContextManager {
   run: typeof runWithContext;
   get: typeof getContext;
@@ -82,6 +149,10 @@ export interface ContextManager {
   setSession: typeof setSession;
   setTag: typeof setTag;
   setData: typeof setData;
+  setTraceId: typeof setTraceId;
+  getTraceId: typeof getTraceId;
+  setSpanId: typeof setSpanId;
+  getSpanId: typeof getSpanId;
   generateId: typeof generateId;
 }
 
@@ -93,5 +164,9 @@ export const context: ContextManager = {
   setSession: setSession,
   setTag: setTag,
   setData: setData,
+  setTraceId: setTraceId,
+  getTraceId: getTraceId,
+  setSpanId: setSpanId,
+  getSpanId: getSpanId,
   generateId: generateId,
 };

@@ -4,6 +4,7 @@ import {
   type TenantContext,
   generateId,
   logger as defaultLogger,
+  parseTraceParent,
   runWithContext,
   type AegisLogger,
 } from "aegislog";
@@ -31,7 +32,10 @@ export function aegisMiddleware(options: HonoAegisOptions = {}): MiddlewareHandl
     const requestId = getHdr("x-request-id") || getHdr("cf-ray") || generateId();
 
     const traceHeader = getHdr("traceparent") || getHdr("x-trace-id");
-    const traceId = traceHeader ? traceHeader.split("-")[1] || traceHeader : undefined;
+    const parsedTrace = traceHeader ? parseTraceParent(traceHeader) : undefined;
+    const traceId =
+      parsedTrace?.traceId ?? (traceHeader ? traceHeader.split("-")[1] || traceHeader : undefined);
+    const spanId = parsedTrace?.spanId;
 
     const ip =
       getHdr("cf-connecting-ip") ||
@@ -47,6 +51,7 @@ export function aegisMiddleware(options: HonoAegisOptions = {}): MiddlewareHandl
       {
         requestId,
         traceId,
+        spanId,
         actor,
         tenant,
         session: { id: requestId, ip, userAgent },

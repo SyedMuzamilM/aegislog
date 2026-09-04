@@ -1,5 +1,15 @@
 # aegislog
 
+## 0.2.5
+
+### Patch Changes
+
+- Add Prometheus metrics sink and W3C trace context correlation:
+
+  - Add `PrometheusMetricsSink` in `@aegislog/transports` providing zero-dependency Prometheus exposition format (`/metrics`) tracking log volume, error rates, compliance audit records, and AI tokens/costs.
+  - Add W3C `traceparent` parsing, formatting, and trace ID / span ID dynamic getters and setters to `aegislog` ambient context.
+  - Update Express, Fastify, and Hono middlewares to automatically extract W3C `traceparent` headers into ambient context for seamless Grafana Tempo distributed trace linking.
+
 ## 0.2.4
 
 ## 0.2.3
