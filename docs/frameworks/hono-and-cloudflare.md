@@ -59,3 +59,15 @@ app.get("/api/users", async (c) => {
 
 export default app;
 ```
+
+---
+
+## 🔍 Automatic W3C Traceparent & Request ID Extraction
+
+The middleware automatically extracts:
+
+- `traceparent` (W3C standard format `00-<trace_id>-<span_id>-<flags>`) into ambient `traceId` and `spanId`.
+- `x-trace-id` (fallback single identifier).
+- `x-request-id` (auto-generates UUID if omitted).
+
+All downstream edge logs and audit records automatically inherit these trace identifiers, allowing instant correlation with Grafana Tempo, Datadog, or AWS X-Ray.

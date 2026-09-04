@@ -27,16 +27,17 @@
    ┌───────────────────────────┐       ┌───────────────────────────┐
    │   Helmet Security Shield  │       │   Long-term Storage /     │
    │ (Auto PII/JWT/Card Scrub) │       │   Compliance SIEM Sink    │
-   └─────────────┬─────────────┘       └───────────────────────────┘
+   └─────────────┬─────────────┘       └─────────────┬─────────────┘
                  │
                  ▼
-   ┌───────────────────────────────────────────────┐
-   │             Dual Output Modes                 │
-   │  • Local Dev: ANSI TUI with Syntax Colors     │
-   │  • Production: OTel-Compliant High-Speed JSON │
-   │  • Cloud: OpenTelemetry OTLP / Axiom / HTTP   │
-   │  • Dev Inspector: Realtime Web Dashboard      │
-   └───────────────────────────────────────────────┘
+    ┌───────────────────────────────────────────────┐
+    │             Dual Output Modes                 │
+    │  • Local Dev: ANSI TUI with Syntax Colors     │
+    │  • Production: OTel-Compliant High-Speed JSON │
+    │  • Cloud: Grafana Loki / Prometheus / OTel /  │
+    │           MongoDB / HTTP Batch Sinks          │
+    │  • Dev Inspector: Realtime Web Dashboard      │
+    └───────────────────────────────────────────────┘
 ```
 
 ---
@@ -62,5 +63,5 @@ AegisLog is structured as an ecosystem of lightweight, modular packages:
 - [`@aegislog/hono`](../packages/hono): Hono & Cloudflare Workers edge middleware adapter.
 - [`@aegislog/fastify`](../packages/fastify): Fastify plugin with global request correlation hooks.
 - [`@aegislog/express`](../packages/express): Express request/response lifecycle middleware.
-- [`@aegislog/transports`](../packages/transports): Native OpenTelemetry OTLP `/v1/logs`, MongoDB, and batching HTTP cloud sinks.
+- [`@aegislog/transports`](../packages/transports): Native Grafana Loki, Prometheus `/metrics`, OpenTelemetry OTLP, and MongoDB batch sinks.
 - [`@aegislog/dev`](../packages/dev): Local visual web inspector dashboard (`npx @aegislog/dev`).

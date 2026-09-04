@@ -188,6 +188,52 @@ await logger.flush();
 
 ---
 
+## 🔗 Distributed Traces to Grafana Tempo (Log-to-Trace Linking)
+
+AegisLog attaches ambient `traceId` and `spanId` to all structured JSON logs. When viewing logs in Grafana Explore, you can jump directly from a log line to its exact distributed trace in **Grafana Tempo**.
+
+### Grafana Datasource Configuration (`derivedFields`)
+
+In your Grafana Loki datasource YAML or UI:
+
+```yaml
+jsonData:
+  derivedFields:
+    - datasourceUid: tempo # Your Tempo datasource UID
+      matcherRegex: '"traceId":"([^"]+)"'
+      name: TraceID
+      url: "$${__value.raw}"
+```
+
+Whenever a log line contains `"traceId": "4bf92f3577b34da6a3ce929d0e0e4736"`, Grafana displays a clickable **TraceID** badge that opens the Tempo waterfall view.
+
+---
+
+## 📈 Pairing Logs with Prometheus Metrics
+
+To achieve full Grafana observability (Logs + Metrics), pair `LokiBatchSink` with `PrometheusMetricsSink`:
+
+```typescript
+import { createLogger } from "aegislog";
+import { LokiBatchSink, PrometheusMetricsSink } from "@aegislog/transports";
+
+const metricsSink = new PrometheusMetricsSink();
+const lokiSink = new LokiBatchSink({ host: "http://localhost:3100" });
+
+const logger = createLogger({
+  sinks: [lokiSink, metricsSink],
+});
+
+// Serve Prometheus metrics at /metrics
+app.get("/metrics", (_req, res) => {
+  res.type(metricsSink.contentType).send(metricsSink.getMetrics());
+});
+```
+
+See the [Prometheus Metrics Guide](./prometheus.md) for full metric details and PromQL queries.
+
+---
+
 ## 🖥️ Pre-Configured Grafana Dashboard
 
 To get started in 30 seconds with a pre-configured Grafana + Loki stack and AegisLog Dashboard, check out the example in [`examples/grafana-loki`](../../examples/grafana-loki):

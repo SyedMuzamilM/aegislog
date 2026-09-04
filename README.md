@@ -192,6 +192,7 @@ Open `http://localhost:4319` in your browser to inspect logs and audit streams i
 - [Fastify Plugin Guide](./docs/frameworks/fastify.md)
 - [Express Middleware Guide](./docs/frameworks/express.md)
 - [Grafana & Grafana Loki Transport](./docs/transports/grafana-loki.md)
+- [Prometheus Metrics Sink](./docs/transports/prometheus.md)
 - [MongoDB Batched Transport](./docs/transports/mongodb.md)
 - [OpenTelemetry OTLP Cloud Transports](./docs/transports/opentelemetry.md)
 - [Localhost Dev Inspector](./docs/dev-inspector.md)

@@ -41,3 +41,9 @@ app.get("/api/orders", async (req, reply) => {
 
 await app.listen({ port: 3000 });
 ```
+
+---
+
+## 🔍 Automatic W3C Traceparent & Request ID Extraction
+
+The plugin automatically extracts incoming `traceparent` (W3C standard format) and `x-trace-id` headers into ambient `traceId` and `spanId`, preserving tracing context across asynchronous Fastify route handlers and services.

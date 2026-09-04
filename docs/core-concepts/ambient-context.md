@@ -83,3 +83,54 @@ import { getContext } from "aegislog";
 const currentContext = getContext();
 console.log(currentContext?.actor?.id); // 'usr_alice'
 ```
+
+---
+
+### 4. Distributed Tracing & Trace Correlation (`traceId`, `spanId`)
+
+AegisLog natively correlates log entries with distributed trace identifiers for OpenTelemetry, Grafana Tempo, AWS X-Ray, Datadog, and Jaeger:
+
+```typescript
+import { context, logger, runWithContext } from "aegislog";
+
+// Pass traceId and spanId directly on request entry:
+await runWithContext(
+  {
+    requestId: "req_123",
+    traceId: "4bf92f3577b34da6a3ce929d0e0e4736",
+    spanId: "00f067aa0ba902b7",
+  },
+  async () => {
+    logger.info("Executing traced operation");
+    // Structured log automatically includes traceId & spanId!
+
+    // Dynamically retrieve or update trace identifiers:
+    console.log(context.getTraceId()); // '4bf92f3577b34da6a3ce929d0e0e4736'
+    console.log(context.getSpanId()); // '00f067aa0ba902b7'
+
+    context.setSpanId("new_child_span_id");
+  },
+);
+```
+
+---
+
+### 5. W3C `traceparent` Header Utilities
+
+AegisLog provides zero-dependency helpers to parse and format standard W3C Trace Context headers (`00-<trace_id>-<span_id>-<flags>`):
+
+```typescript
+import { parseTraceParent, formatTraceParent } from "aegislog";
+
+// 1. Parse incoming W3C traceparent header
+const parsed = parseTraceParent(req.headers["traceparent"]);
+if (parsed) {
+  console.log(parsed.traceId); // '4bf92f3577b34da6a3ce929d0e0e4736'
+  console.log(parsed.spanId); // '00f067aa0ba902b7'
+  console.log(parsed.sampled); // true
+}
+
+// 2. Format outgoing W3C traceparent header for downstream HTTP calls
+const outgoingHeader = formatTraceParent(parsed.traceId, parsed.spanId);
+// Returns: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01'
+```

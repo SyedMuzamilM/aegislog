@@ -134,3 +134,34 @@ npx @aegislog/dev --port 4319
 ```
 
 Open `http://localhost:4319` in your browser to view incoming logs in real time with level filters, escaped JSON details, and search.
+
+---
+
+## 8. Cloud & Observability Transports (Loki, Prometheus, MongoDB, OTel)
+
+Ship your logs and metrics seamlessly to Grafana Loki, Prometheus, MongoDB, or OpenTelemetry using `@aegislog/transports`:
+
+```bash
+pnpm add @aegislog/transports
+```
+
+```typescript
+import { createLogger } from "aegislog";
+import { LokiBatchSink, PrometheusMetricsSink, MongoBatchSink } from "@aegislog/transports";
+
+// 1. Prometheus /metrics endpoint
+export const prometheus = new PrometheusMetricsSink({ prefix: "myapp_" });
+
+// 2. Grafana Loki Batch Sink
+const loki = new LokiBatchSink({
+  host: "http://localhost:3100",
+  labels: { app: "order-service", env: "production" },
+  batchSize: 50,
+  flushIntervalMs: 2000,
+});
+
+// 3. AegisLog Multi-Sink Setup
+export const logger = createLogger({
+  sinks: [new ConsolePrettySink(), loki, prometheus],
+});
+```
