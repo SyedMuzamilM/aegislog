@@ -73,4 +73,48 @@ describe("AegisLog Express Middleware", () => {
       server.close();
     }
   });
+
+  it("injects W3C Server-Timing header and captures phase timings", async () => {
+    const memory = new MemorySink();
+    const testLogger = createLogger({ sinks: [memory] });
+
+    const app = express();
+    app.use(aegisExpressMiddleware({ logger: testLogger, serverTiming: true }));
+
+    app.get("/waterfall-test", async (req, res) => {
+      const timing = (res as any).timing;
+      expect(timing).toBeDefined();
+
+      timing.record("auth_check", 12.5, "Authentication");
+      await timing.time("db_query", async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      });
+
+      res.status(200).json({ ok: true });
+    });
+
+    const server = app.listen(0);
+    const port = (server.address() as { port: number }).port;
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/waterfall-test`);
+      expect(response.status).toBe(200);
+
+      const serverTiming = response.headers.get("server-timing");
+      expect(serverTiming).toBeDefined();
+      expect(serverTiming).toContain("total;dur=");
+      expect(serverTiming).toContain('auth_check;dur=12.5;desc="Authentication"');
+      expect(serverTiming).toContain("db_query;dur=");
+
+      expect(response.headers.get("timing-allow-origin")).toBe("*");
+
+      // Verify phases were logged in metadata
+      const finishedLog = memory.entries.find((e) => e.message.includes("<-- GET /waterfall-test 200"));
+      expect(finishedLog).toBeDefined();
+      expect(finishedLog?.meta?.phases).toBeDefined();
+      expect((finishedLog?.meta?.phases as any)?.auth_check).toBe(12.5);
+    } finally {
+      server.close();
+    }
+  });
 });

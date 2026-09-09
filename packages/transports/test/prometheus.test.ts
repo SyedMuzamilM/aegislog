@@ -129,4 +129,59 @@ describe("PrometheusMetricsSink (Grafana Metrics)", () => {
     output = metricsSink.getMetrics();
     expect(output).not.toContain("shop_logs_total");
   });
+
+  it("records HTTP request latency and waterfall phase histograms", () => {
+    const metricsSink = new PrometheusMetricsSink();
+
+    metricsSink.recordHttpRequest({
+      method: "GET",
+      route: "/api/v1/users",
+      status: 200,
+      durationMs: 45,
+    });
+
+    metricsSink.recordHttpPhase({
+      phase: "db_query",
+      route: "/api/v1/users",
+      durationMs: 15,
+    });
+
+    const output = metricsSink.getMetrics();
+    expect(output).toContain("# HELP aegislog_http_requests_total Total number of HTTP requests completed");
+    expect(output).toContain("# TYPE aegislog_http_requests_total counter");
+    expect(output).toContain('aegislog_http_requests_total{method="GET",route="/api/v1/users",status="200"} 1');
+
+    expect(output).toContain("# HELP aegislog_http_request_duration_seconds HTTP request latency waterfall in seconds");
+    expect(output).toContain("# TYPE aegislog_http_request_duration_seconds histogram");
+    expect(output).toContain('aegislog_http_request_duration_seconds_bucket{le="0.05",method="GET",route="/api/v1/users",status="200"} 1');
+    expect(output).toContain('aegislog_http_request_duration_seconds_bucket{le="+Inf",method="GET",route="/api/v1/users",status="200"} 1');
+    expect(output).toContain('aegislog_http_request_duration_seconds_count{method="GET",route="/api/v1/users",status="200"} 1');
+
+    expect(output).toContain("# HELP aegislog_http_phase_duration_seconds HTTP waterfall sub-phase latency in seconds");
+    expect(output).toContain("# TYPE aegislog_http_phase_duration_seconds histogram");
+    expect(output).toContain('aegislog_http_phase_duration_seconds_bucket{le="0.025",phase="db_query",route="/api/v1/users"} 1');
+  });
+
+  it("automatically detects HTTP request and phase metadata from log entries", () => {
+    const metricsSink = new PrometheusMetricsSink();
+    const logger = createLogger({ sinks: [metricsSink] });
+
+    logger.info("<-- POST /api/v1/checkout 201 in 120ms", {
+      status: 201,
+      durationMs: 120,
+      method: "POST",
+      route: "/api/v1/checkout",
+      phases: {
+        auth_check: 10,
+        db: 65,
+        payment_gateway: 40,
+      },
+    });
+
+    const output = metricsSink.getMetrics();
+    expect(output).toContain('aegislog_http_requests_total{method="POST",route="/api/v1/checkout",status="201"} 1');
+    expect(output).toContain('aegislog_http_phase_duration_seconds_bucket{le="0.01",phase="auth_check",route="/api/v1/checkout"} 1');
+    expect(output).toContain('aegislog_http_phase_duration_seconds_bucket{le="0.1",phase="db",route="/api/v1/checkout"} 1');
+    expect(output).toContain('aegislog_http_phase_duration_seconds_bucket{le="0.05",phase="payment_gateway",route="/api/v1/checkout"} 1');
+  });
 });

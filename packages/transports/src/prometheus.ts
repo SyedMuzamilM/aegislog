@@ -25,6 +25,23 @@ export interface PrometheusMetricsSinkOptions {
    * Whether to track compliance audit record metrics (default: true)
    */
   includeAuditMetrics?: boolean;
+
+  /**
+   * Whether to track HTTP request metrics and waterfall phase durations (default: true)
+   */
+  includeHttpMetrics?: boolean;
+
+  /**
+   * Buckets for http_request_duration_seconds histogram in seconds.
+   * Default: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+   */
+  httpDurationBuckets?: number[];
+
+  /**
+   * Buckets for http_phase_duration_seconds histogram in seconds.
+   * Default: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2]
+   */
+  httpPhaseBuckets?: number[];
 }
 
 function sanitizeIdentifier(str: string): string {
@@ -48,6 +65,29 @@ interface LatencySummary {
   count: number;
 }
 
+interface HistogramData {
+  labels: Record<string, string>;
+  buckets: number[];
+  counts: number[];
+  infCount: number;
+  sum: number;
+  count: number;
+}
+
+const DEFAULT_HTTP_DURATION_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
+const DEFAULT_HTTP_PHASE_BUCKETS = [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2];
+
+function observeHistogram(data: HistogramData, valSec: number): void {
+  for (let i = 0; i < data.buckets.length; i++) {
+    if (valSec <= data.buckets[i]!) {
+      data.counts[i] = (data.counts[i] ?? 0) + 1;
+    }
+  }
+  data.infCount += 1;
+  data.sum += valSec;
+  data.count += 1;
+}
+
 export class PrometheusMetricsSink implements LogSink {
   public name: string;
   public readonly contentType = "text/plain; version=0.0.4; charset=utf-8";
@@ -56,6 +96,9 @@ export class PrometheusMetricsSink implements LogSink {
   private defaultLabels: Record<string, string>;
   private includeAiMetrics: boolean;
   private includeAuditMetrics: boolean;
+  private includeHttpMetrics: boolean;
+  private httpDurationBuckets: number[];
+  private httpPhaseBuckets: number[];
 
   private logCounts = new Map<string, number>();
   private errorCounts = new Map<string, number>();
@@ -65,12 +108,87 @@ export class PrometheusMetricsSink implements LogSink {
   private aiCostTotals = new Map<string, number>();
   private aiLatencies = new Map<string, LatencySummary>();
 
+  private httpRequestsTotal = new Map<string, number>();
+  private httpRequestDurations = new Map<string, HistogramData>();
+  private httpPhaseDurations = new Map<string, HistogramData>();
+
   constructor(options: PrometheusMetricsSinkOptions = {}) {
     this.name = options.name ?? "prometheus";
     this.prefix = options.prefix ?? "aegislog_";
     this.defaultLabels = options.defaultLabels ?? {};
     this.includeAiMetrics = options.includeAiMetrics ?? true;
     this.includeAuditMetrics = options.includeAuditMetrics ?? true;
+    this.includeHttpMetrics = options.includeHttpMetrics ?? true;
+    this.httpDurationBuckets = (options.httpDurationBuckets ?? DEFAULT_HTTP_DURATION_BUCKETS).slice().sort((a, b) => a - b);
+    this.httpPhaseBuckets = (options.httpPhaseBuckets ?? DEFAULT_HTTP_PHASE_BUCKETS).slice().sort((a, b) => a - b);
+  }
+
+  public recordHttpRequest(params: {
+    method: string;
+    status: number;
+    durationMs: number;
+    route?: string;
+    labels?: Record<string, string>;
+  }): void {
+    if (!this.includeHttpMetrics) return;
+
+    const baseLabels: Record<string, string> = {
+      ...this.defaultLabels,
+      ...params.labels,
+      method: sanitizeIdentifier(params.method.toUpperCase()),
+      status: String(params.status),
+      route: params.route || "unknown",
+    };
+
+    const key = formatLabelString(baseLabels);
+    this.httpRequestsTotal.set(key, (this.httpRequestsTotal.get(key) ?? 0) + 1);
+
+    const durationSec = Math.max(0, params.durationMs / 1000);
+    let hist = this.httpRequestDurations.get(key);
+    if (!hist) {
+      hist = {
+        labels: baseLabels,
+        buckets: this.httpDurationBuckets,
+        counts: new Array(this.httpDurationBuckets.length).fill(0),
+        infCount: 0,
+        sum: 0,
+        count: 0,
+      };
+      this.httpRequestDurations.set(key, hist);
+    }
+    observeHistogram(hist, durationSec);
+  }
+
+  public recordHttpPhase(params: {
+    phase: string;
+    durationMs: number;
+    route?: string;
+    labels?: Record<string, string>;
+  }): void {
+    if (!this.includeHttpMetrics) return;
+
+    const baseLabels: Record<string, string> = {
+      ...this.defaultLabels,
+      ...params.labels,
+      phase: sanitizeIdentifier(params.phase),
+      route: params.route || "unknown",
+    };
+
+    const key = formatLabelString(baseLabels);
+    const durationSec = Math.max(0, params.durationMs / 1000);
+    let hist = this.httpPhaseDurations.get(key);
+    if (!hist) {
+      hist = {
+        labels: baseLabels,
+        buckets: this.httpPhaseBuckets,
+        counts: new Array(this.httpPhaseBuckets.length).fill(0),
+        infCount: 0,
+        sum: 0,
+        count: 0,
+      };
+      this.httpPhaseDurations.set(key, hist);
+    }
+    observeHistogram(hist, durationSec);
   }
 
   public log(entry: LogEntry): void {
@@ -95,6 +213,38 @@ export class PrometheusMetricsSink implements LogSink {
       }
       const errKey = formatLabelString(errLabels);
       this.errorCounts.set(errKey, (this.errorCounts.get(errKey) ?? 0) + 1);
+    }
+
+    // Auto-detect HTTP request log and populate HTTP duration & phase histograms
+    if (this.includeHttpMetrics && entry.meta && typeof entry.meta === "object") {
+      const meta = entry.meta as Record<string, any>;
+      const hasDuration = typeof meta.durationMs === "number";
+      const hasStatus = typeof meta.status === "number" || typeof meta.statusCode === "number";
+
+      if (hasDuration && hasStatus) {
+        const status = (meta.status ?? meta.statusCode) as number;
+        const method = (meta.method as string) || entry.message.match(/<--\s+([A-Z]+)/)?.[1] || "GET";
+        const route = (meta.route as string) || (meta.path as string) || (meta.url as string) || "unknown";
+
+        this.recordHttpRequest({
+          method,
+          status,
+          route,
+          durationMs: meta.durationMs as number,
+        });
+
+        if (meta.phases && typeof meta.phases === "object") {
+          for (const [phase, dur] of Object.entries(meta.phases)) {
+            if (typeof dur === "number") {
+              this.recordHttpPhase({
+                phase,
+                route,
+                durationMs: dur,
+              });
+            }
+          }
+        }
+      }
     }
 
     if (this.includeAiMetrics && entry.meta?.ai && typeof entry.meta.ai === "object") {
@@ -191,6 +341,54 @@ export class PrometheusMetricsSink implements LogSink {
       }
     }
 
+    if (this.httpRequestsTotal.size > 0) {
+      lines.push(
+        `# HELP ${this.prefix}http_requests_total Total number of HTTP requests completed`,
+      );
+      lines.push(`# TYPE ${this.prefix}http_requests_total counter`);
+      for (const [labels, count] of this.httpRequestsTotal.entries()) {
+        lines.push(`${this.prefix}http_requests_total${labels} ${count}`);
+      }
+    }
+
+    if (this.httpRequestDurations.size > 0) {
+      lines.push(
+        `# HELP ${this.prefix}http_request_duration_seconds HTTP request latency waterfall in seconds`,
+      );
+      lines.push(`# TYPE ${this.prefix}http_request_duration_seconds histogram`);
+      for (const hist of this.httpRequestDurations.values()) {
+        for (let i = 0; i < hist.buckets.length; i++) {
+          const le = hist.buckets[i]!;
+          const bucketLabels = formatLabelString({ ...hist.labels, le: String(le) });
+          lines.push(`${this.prefix}http_request_duration_seconds_bucket${bucketLabels} ${hist.counts[i]}`);
+        }
+        const infLabels = formatLabelString({ ...hist.labels, le: "+Inf" });
+        lines.push(`${this.prefix}http_request_duration_seconds_bucket${infLabels} ${hist.infCount}`);
+        const baseLabels = formatLabelString(hist.labels);
+        lines.push(`${this.prefix}http_request_duration_seconds_sum${baseLabels} ${Number(hist.sum.toFixed(6))}`);
+        lines.push(`${this.prefix}http_request_duration_seconds_count${baseLabels} ${hist.count}`);
+      }
+    }
+
+    if (this.httpPhaseDurations.size > 0) {
+      lines.push(
+        `# HELP ${this.prefix}http_phase_duration_seconds HTTP waterfall sub-phase latency in seconds`,
+      );
+      lines.push(`# TYPE ${this.prefix}http_phase_duration_seconds histogram`);
+      for (const hist of this.httpPhaseDurations.values()) {
+        for (let i = 0; i < hist.buckets.length; i++) {
+          const le = hist.buckets[i]!;
+          const bucketLabels = formatLabelString({ ...hist.labels, le: String(le) });
+          lines.push(`${this.prefix}http_phase_duration_seconds_bucket${bucketLabels} ${hist.counts[i]}`);
+        }
+        const infLabels = formatLabelString({ ...hist.labels, le: "+Inf" });
+        lines.push(`${this.prefix}http_phase_duration_seconds_bucket${infLabels} ${hist.infCount}`);
+        const baseLabels = formatLabelString(hist.labels);
+        lines.push(`${this.prefix}http_phase_duration_seconds_sum${baseLabels} ${Number(hist.sum.toFixed(6))}`);
+        lines.push(`${this.prefix}http_phase_duration_seconds_count${baseLabels} ${hist.count}`);
+      }
+    }
+
     if (this.aiRequestCounts.size > 0) {
       lines.push(
         `# HELP ${this.prefix}ai_requests_total Total number of AI model tracking requests`,
@@ -239,5 +437,8 @@ export class PrometheusMetricsSink implements LogSink {
     this.aiTokenCounts.clear();
     this.aiCostTotals.clear();
     this.aiLatencies.clear();
+    this.httpRequestsTotal.clear();
+    this.httpRequestDurations.clear();
+    this.httpPhaseDurations.clear();
   }
 }
