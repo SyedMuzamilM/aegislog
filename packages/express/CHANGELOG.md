@@ -1,5 +1,13 @@
 # @aegislog/express
 
+## 0.2.6
+
+### Patch Changes
+
+- Add HTTP latency waterfall histograms, phase duration metrics, and W3C Server-Timing support
+- Updated dependencies
+  - aegislog@0.2.6
+
 ## 0.2.5
 
 ### Patch Changes

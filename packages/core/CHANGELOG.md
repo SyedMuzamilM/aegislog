@@ -1,5 +1,11 @@
 # aegislog
 
+## 0.2.6
+
+### Patch Changes
+
+- Add HTTP latency waterfall histograms, phase duration metrics, and W3C Server-Timing support
+
 ## 0.2.5
 
 ### Patch Changes

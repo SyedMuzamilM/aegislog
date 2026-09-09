@@ -119,8 +119,12 @@ export class PrometheusMetricsSink implements LogSink {
     this.includeAiMetrics = options.includeAiMetrics ?? true;
     this.includeAuditMetrics = options.includeAuditMetrics ?? true;
     this.includeHttpMetrics = options.includeHttpMetrics ?? true;
-    this.httpDurationBuckets = (options.httpDurationBuckets ?? DEFAULT_HTTP_DURATION_BUCKETS).slice().sort((a, b) => a - b);
-    this.httpPhaseBuckets = (options.httpPhaseBuckets ?? DEFAULT_HTTP_PHASE_BUCKETS).slice().sort((a, b) => a - b);
+    this.httpDurationBuckets = (options.httpDurationBuckets ?? DEFAULT_HTTP_DURATION_BUCKETS)
+      .slice()
+      .sort((a, b) => a - b);
+    this.httpPhaseBuckets = (options.httpPhaseBuckets ?? DEFAULT_HTTP_PHASE_BUCKETS)
+      .slice()
+      .sort((a, b) => a - b);
   }
 
   public recordHttpRequest(params: {
@@ -149,7 +153,7 @@ export class PrometheusMetricsSink implements LogSink {
       hist = {
         labels: baseLabels,
         buckets: this.httpDurationBuckets,
-        counts: new Array(this.httpDurationBuckets.length).fill(0),
+        counts: Array.from({ length: this.httpDurationBuckets.length }, () => 0),
         infCount: 0,
         sum: 0,
         count: 0,
@@ -181,7 +185,7 @@ export class PrometheusMetricsSink implements LogSink {
       hist = {
         labels: baseLabels,
         buckets: this.httpPhaseBuckets,
-        counts: new Array(this.httpPhaseBuckets.length).fill(0),
+        counts: Array.from({ length: this.httpPhaseBuckets.length }, () => 0),
         infCount: 0,
         sum: 0,
         count: 0,
@@ -223,8 +227,10 @@ export class PrometheusMetricsSink implements LogSink {
 
       if (hasDuration && hasStatus) {
         const status = (meta.status ?? meta.statusCode) as number;
-        const method = (meta.method as string) || entry.message.match(/<--\s+([A-Z]+)/)?.[1] || "GET";
-        const route = (meta.route as string) || (meta.path as string) || (meta.url as string) || "unknown";
+        const method =
+          (meta.method as string) || entry.message.match(/<--\s+([A-Z]+)/)?.[1] || "GET";
+        const route =
+          (meta.route as string) || (meta.path as string) || (meta.url as string) || "unknown";
 
         this.recordHttpRequest({
           method,
@@ -360,12 +366,18 @@ export class PrometheusMetricsSink implements LogSink {
         for (let i = 0; i < hist.buckets.length; i++) {
           const le = hist.buckets[i]!;
           const bucketLabels = formatLabelString({ ...hist.labels, le: String(le) });
-          lines.push(`${this.prefix}http_request_duration_seconds_bucket${bucketLabels} ${hist.counts[i]}`);
+          lines.push(
+            `${this.prefix}http_request_duration_seconds_bucket${bucketLabels} ${hist.counts[i]}`,
+          );
         }
         const infLabels = formatLabelString({ ...hist.labels, le: "+Inf" });
-        lines.push(`${this.prefix}http_request_duration_seconds_bucket${infLabels} ${hist.infCount}`);
+        lines.push(
+          `${this.prefix}http_request_duration_seconds_bucket${infLabels} ${hist.infCount}`,
+        );
         const baseLabels = formatLabelString(hist.labels);
-        lines.push(`${this.prefix}http_request_duration_seconds_sum${baseLabels} ${Number(hist.sum.toFixed(6))}`);
+        lines.push(
+          `${this.prefix}http_request_duration_seconds_sum${baseLabels} ${Number(hist.sum.toFixed(6))}`,
+        );
         lines.push(`${this.prefix}http_request_duration_seconds_count${baseLabels} ${hist.count}`);
       }
     }
@@ -379,12 +391,16 @@ export class PrometheusMetricsSink implements LogSink {
         for (let i = 0; i < hist.buckets.length; i++) {
           const le = hist.buckets[i]!;
           const bucketLabels = formatLabelString({ ...hist.labels, le: String(le) });
-          lines.push(`${this.prefix}http_phase_duration_seconds_bucket${bucketLabels} ${hist.counts[i]}`);
+          lines.push(
+            `${this.prefix}http_phase_duration_seconds_bucket${bucketLabels} ${hist.counts[i]}`,
+          );
         }
         const infLabels = formatLabelString({ ...hist.labels, le: "+Inf" });
         lines.push(`${this.prefix}http_phase_duration_seconds_bucket${infLabels} ${hist.infCount}`);
         const baseLabels = formatLabelString(hist.labels);
-        lines.push(`${this.prefix}http_phase_duration_seconds_sum${baseLabels} ${Number(hist.sum.toFixed(6))}`);
+        lines.push(
+          `${this.prefix}http_phase_duration_seconds_sum${baseLabels} ${Number(hist.sum.toFixed(6))}`,
+        );
         lines.push(`${this.prefix}http_phase_duration_seconds_count${baseLabels} ${hist.count}`);
       }
     }

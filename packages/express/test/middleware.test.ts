@@ -109,7 +109,9 @@ describe("AegisLog Express Middleware", () => {
       expect(response.headers.get("timing-allow-origin")).toBe("*");
 
       // Verify phases were logged in metadata
-      const finishedLog = memory.entries.find((e) => e.message.includes("<-- GET /waterfall-test 200"));
+      const finishedLog = memory.entries.find((e) =>
+        e.message.includes("<-- GET /waterfall-test 200"),
+      );
       expect(finishedLog).toBeDefined();
       expect(finishedLog?.meta?.phases).toBeDefined();
       expect((finishedLog?.meta?.phases as any)?.auth_check).toBe(12.5);
