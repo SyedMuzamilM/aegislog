@@ -63,3 +63,7 @@ The middleware automatically extracts:
 - `x-request-id` (auto-generates UUID if omitted).
 
 All downstream logs and audit records automatically inherit these trace identifiers, allowing instant correlation with Grafana Tempo, Datadog, or AWS X-Ray.
+
+## Automatic dependency profiling
+
+For MongoDB commands and pool waits, Mongoose, ioredis, HTTP clients and nested application operations, see [`@aegislog/profiling`](../../packages/profiling/README.md). Start it before importing Express or database clients, then mount its middleware before body parsing and authentication. Existing Aegis middleware preserves its trace context. Repeated manual phase records now accumulate instead of overwriting the previous record.

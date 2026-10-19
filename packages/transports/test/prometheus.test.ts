@@ -3,6 +3,32 @@ import { createLogger } from "aegislog";
 import { PrometheusMetricsSink } from "../src/prometheus.js";
 
 describe("PrometheusMetricsSink (Grafana Metrics)", () => {
+  it("records sampled profile categories without double-counting requests", () => {
+    const sink = new PrometheusMetricsSink();
+    const logger = createLogger({ sinks: [sink] });
+    logger.info("completed", {
+      method: "GET",
+      route: "/items/:id",
+      statusCode: 200,
+      durationMs: 20,
+    });
+    logger.info("profile", {
+      event: "request_profile",
+      method: "GET",
+      route: "/items/:id",
+      statusCode: 200,
+      totalMs: 20,
+      categories: { mongodb: { wallMs: 12 }, invalid: { wallMs: Number.NaN } },
+    });
+    const metrics = sink.getMetrics();
+    expect(metrics).toContain(
+      'aegislog_http_requests_total{method="GET",route="/items/:id",status="200"} 1',
+    );
+    expect(metrics).toContain(
+      'aegislog_http_phase_duration_seconds_sum{phase="mongodb",route="/items/:id"} 0.012',
+    );
+    expect(metrics).not.toContain('phase="invalid"');
+  });
   it("tracks log entries and generates Prometheus text format with correct HELP, TYPE, and labels", () => {
     const metricsSink = new PrometheusMetricsSink();
     const logger = createLogger({

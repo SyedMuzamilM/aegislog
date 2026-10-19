@@ -33,6 +33,10 @@
 
 ---
 
+## Request profiling
+
+For database commands, connection-pool waits, cache/Redis, application phases and HTTP dependencies, use the optional [request profiling package](./packages/profiling/README.md). Existing manual phase timers and the OTLP log exporter remain available. The profiling package adds actual trace export independently of logs.
+
 ## ⚡ Microbenchmark Results
 
 Executed with `pnpm bench` (Apple Silicon M-Series):
@@ -51,13 +55,15 @@ Executed with `pnpm bench` (Apple Silicon M-Series):
 
 | Package                                         | Version | Description                                                                               |
 | :---------------------------------------------- | :------ | :---------------------------------------------------------------------------------------- |
-| [`aegislog`](./packages/core)                   | `0.2.5` | Core logging, context, shield, audit, and AI tracking engine                              |
-| [`@aegislog/next`](./packages/next)             | `0.2.5` | Next.js App Router context wrapper & Server Action loggers                                |
-| [`@aegislog/hono`](./packages/hono)             | `0.2.5` | Hono & Cloudflare Workers edge middleware adapter with W3C traceparent                    |
-| [`@aegislog/fastify`](./packages/fastify)       | `0.2.5` | Fastify v4/v5 plugin adapter with global hooks and W3C traceparent                        |
-| [`@aegislog/express`](./packages/express)       | `0.2.5` | Express request/response lifecycle middleware with W3C traceparent                        |
-| [`@aegislog/transports`](./packages/transports) | `0.2.5` | Grafana Loki, Prometheus metrics, MongoDB, OpenTelemetry OTLP `/v1/logs`, and Axiom sinks |
-| [`@aegislog/dev`](./packages/dev)               | `0.2.5` | Standalone local visual web dashboard & CLI inspector                                     |
+| [`aegislog`](./packages/core)                   | `0.3.0` | Core logging, context, shield, audit, and AI tracking engine                              |
+| [`@aegislog/next`](./packages/next)             | `0.3.0` | Next.js App Router context wrapper & Server Action loggers                                |
+| [`@aegislog/hono`](./packages/hono)             | `0.3.0` | Hono & Cloudflare Workers edge middleware adapter with W3C traceparent                    |
+| [`@aegislog/fastify`](./packages/fastify)       | `0.3.0` | Fastify v4/v5 plugin adapter with global hooks and W3C traceparent                        |
+| [`@aegislog/express`](./packages/express)       | `0.3.0` | Express request/response lifecycle middleware with W3C traceparent                        |
+| [`@aegislog/transports`](./packages/transports) | `0.3.0` | Grafana Loki, Prometheus metrics, MongoDB, OpenTelemetry OTLP `/v1/logs`, and Axiom sinks |
+| [`@aegislog/dev`](./packages/dev)               | `0.3.0` | Standalone local visual web dashboard & CLI inspector                                     |
+
+| [`@aegislog/profiling`](./packages/profiling) | `0.3.0` | Optional MongoDB, pool, Mongoose, Redis and HTTP request waterfalls with real OTLP traces |
 
 ---
 

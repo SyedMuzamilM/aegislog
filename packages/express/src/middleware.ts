@@ -4,6 +4,7 @@ import {
   type AegisLogger,
   type TenantContext,
   generateId,
+  getContext,
   logger,
   parseTraceParent,
   runWithContext,
@@ -33,7 +34,12 @@ export function createRequestTiming(): RequestTiming {
 
   return {
     record(phase: string, durationMs: number, description?: string) {
-      phases.set(phase, { durationMs: Math.max(0, Number(durationMs.toFixed(2))), description });
+      if (!Number.isFinite(durationMs)) return;
+      const previous = phases.get(phase)?.durationMs ?? 0;
+      phases.set(phase, {
+        durationMs: Math.max(0, Number((previous + Math.max(0, durationMs)).toFixed(2))),
+        description,
+      });
     },
     async time<T>(phase: string, fn: () => Promise<T> | T, description?: string): Promise<T> {
       const start = performance.now();
@@ -41,7 +47,8 @@ export function createRequestTiming(): RequestTiming {
         return await fn();
       } finally {
         const dur = Number((performance.now() - start).toFixed(2));
-        phases.set(phase, { durationMs: dur, description });
+        const previous = phases.get(phase)?.durationMs ?? 0;
+        phases.set(phase, { durationMs: Number((previous + dur).toFixed(2)), description });
       }
     },
     getPhases() {
@@ -58,7 +65,12 @@ export function createRequestTiming(): RequestTiming {
       }
       for (const [name, p] of phases.entries()) {
         const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "_");
-        const desc = p.description ? `;desc="${p.description.replace(/"/g, "'")}"` : "";
+        const desc = p.description
+          ? `;desc="${p.description
+              .replace(/[^\x20-\x7e]/g, " ")
+              .replace(/\\/g, "\\\\")
+              .replace(/"/g, '\\"')}"`
+          : "";
         parts.push(`${sanitized};dur=${p.durationMs}${desc}`);
       }
       return parts.join(", ");
@@ -97,8 +109,10 @@ export function aegisExpressMiddleware(
     const traceHeader = Array.isArray(rawTraceHeader) ? rawTraceHeader[0] : rawTraceHeader;
     const parsedTrace = traceHeader ? parseTraceParent(traceHeader) : undefined;
     const traceId =
-      parsedTrace?.traceId ?? (traceHeader ? traceHeader.split("-")[1] || traceHeader : undefined);
-    const spanId = parsedTrace?.spanId;
+      getContext()?.traceId ??
+      parsedTrace?.traceId ??
+      (traceHeader ? traceHeader.split("-")[1] || traceHeader : undefined);
+    const spanId = getContext()?.spanId ?? parsedTrace?.spanId;
 
     const ip =
       (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
