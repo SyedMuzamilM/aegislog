@@ -67,7 +67,7 @@ export function createRequestTiming(): RequestTiming {
         const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "_");
         const desc = p.description
           ? `;desc="${p.description
-              .replace(/[\r\n]/g, " ")
+              .replace(/[^\x20-\x7e]/g, " ")
               .replace(/\\/g, "\\\\")
               .replace(/"/g, '\\"')}"`
           : "";

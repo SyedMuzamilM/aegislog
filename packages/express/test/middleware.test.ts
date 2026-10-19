@@ -14,7 +14,7 @@ describe("AegisLog Express Middleware", () => {
   });
   it("makes phase descriptions safe for HTTP headers", () => {
     const timing = createRequestTiming();
-    timing.record("db\r\nInjected", 1, 'description\r\nwith "quotes"');
+    timing.record("db\r\nInjected", 1, 'description\r\nwith "quotes"\u0000');
     const header = timing.formatServerTiming();
     expect(header).not.toMatch(/[\r\n]/);
     expect(header).toContain('\\"quotes\\"');

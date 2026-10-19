@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { startProfiling, profileOperation } from "../src/index.js";
 import { coveredMs, RequestProfile, scrubSpan } from "../src/profiling.js";
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-base";
 
@@ -12,6 +13,17 @@ const span = (id: string, startMs = 10) =>
   }) as unknown as ReadableSpan;
 
 describe("request profiling", () => {
+  it("validates sampling and span limits before starting an SDK", () => {
+    expect(() => startProfiling({ sampleRate: -1 })).toThrow(RangeError);
+    expect(() => startProfiling({ sampleRate: Number.NaN })).toThrow(RangeError);
+    expect(() => startProfiling({ maxSpans: 0 })).toThrow(RangeError);
+    expect(() => startProfiling({ otlp: { endpoint: "file:///tmp/trace" } })).toThrow();
+    expect(startProfiling({ enabled: false }).enabled).toBe(false);
+  });
+  it("preserves promise identity outside a sampled request", () => {
+    const pending = Promise.resolve("unchanged");
+    expect(profileOperation("operation", "application", () => pending)).toBe(pending);
+  });
   it("merges parallel and nested intervals", () => {
     expect(
       coveredMs([
