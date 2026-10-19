@@ -58,3 +58,7 @@ const logger = createLogger({
   sinks: [axiomSink],
 });
 ```
+
+## Request traces
+
+`OpenTelemetrySink` exports OTLP logs to `/v1/logs`. It does not instrument database clients or export spans. Use [`@aegislog/profiling`](../../packages/profiling/README.md) for request waterfalls and actual OTLP traces at `/v1/traces`. Both can use the same collector with separate ingest URLs.

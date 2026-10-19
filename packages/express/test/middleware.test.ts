@@ -1,9 +1,24 @@
 import express from "express";
 import { describe, expect, it } from "vitest";
 import { MemorySink, createLogger } from "aegislog";
-import { aegisExpressMiddleware } from "../src/middleware.js";
+import { aegisExpressMiddleware, createRequestTiming } from "../src/middleware.js";
 
 describe("AegisLog Express Middleware", () => {
+  it("adds repeated phase timings and rejects nonfinite values", () => {
+    const timing = createRequestTiming();
+    timing.record("db", 2);
+    timing.record("db", 3);
+    timing.record("db", Number.NaN);
+    timing.record("db", -100);
+    expect(timing.getPhases().db).toBe(5);
+  });
+  it("makes phase descriptions safe for HTTP headers", () => {
+    const timing = createRequestTiming();
+    timing.record("db\r\nInjected", 1, 'description\r\nwith "quotes"');
+    const header = timing.formatServerTiming();
+    expect(header).not.toMatch(/[\r\n]/);
+    expect(header).toContain('\\"quotes\\"');
+  });
   it("attaches context and logs request lifecycle", async () => {
     const memory = new MemorySink();
     const testLogger = createLogger({ sinks: [memory] });

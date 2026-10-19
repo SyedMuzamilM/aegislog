@@ -1,5 +1,11 @@
 # @aegislog/next
 
+## 0.3.0
+
+### Patch Changes
+
+- aegislog@0.3.0
+
 ## 0.2.6
 
 ### Patch Changes

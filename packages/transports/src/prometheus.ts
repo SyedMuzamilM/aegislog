@@ -222,6 +222,24 @@ export class PrometheusMetricsSink implements LogSink {
     // Auto-detect HTTP request log and populate HTTP duration & phase histograms
     if (this.includeHttpMetrics && entry.meta && typeof entry.meta === "object") {
       const meta = entry.meta as Record<string, any>;
+      // Request profiles are sampled and may accompany a normal completion log.
+      // Record their category timings without counting the HTTP request twice.
+      if (
+        typeof meta.totalMs === "number" &&
+        meta.categories &&
+        typeof meta.categories === "object"
+      ) {
+        for (const [phase, value] of Object.entries(meta.categories)) {
+          const wallMs = (value as { wallMs?: unknown } | null)?.wallMs;
+          if (typeof wallMs === "number" && Number.isFinite(wallMs) && wallMs >= 0) {
+            this.recordHttpPhase({
+              phase,
+              route: typeof meta.route === "string" ? meta.route : "unknown",
+              durationMs: wallMs,
+            });
+          }
+        }
+      }
       const hasDuration = typeof meta.durationMs === "number";
       const hasStatus = typeof meta.status === "number" || typeof meta.statusCode === "number";
 
