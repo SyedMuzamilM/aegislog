@@ -1,5 +1,11 @@
 # @aegislog/transports
 
+## 0.3.1
+
+### Patch Changes
+
+- aegislog@0.3.1
+
 ## 0.3.0
 
 ### Minor Changes
