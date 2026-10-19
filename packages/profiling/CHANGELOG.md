@@ -1,5 +1,12 @@
 # @aegislog/profiling
 
+## 0.3.1
+
+### Patch Changes
+
+- Resolve the Express profiling entry's declarations under TypeScript's legacy Node/CommonJS module resolver. Add a standalone consumer compilation regression test without changing runtime instrumentation.
+- aegislog@0.3.1
+
 ## 0.3.0
 
 ### Minor Changes

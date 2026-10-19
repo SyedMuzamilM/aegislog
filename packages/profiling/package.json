@@ -1,6 +1,6 @@
 {
   "name": "@aegislog/profiling",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Opt-in request waterfalls and OpenTelemetry instrumentation for AegisLog.",
   "homepage": "https://github.com/syedmuzamilm/aegislog#readme",
   "license": "MIT",
@@ -18,6 +18,13 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "express": [
+        "dist/express.d.ts"
+      ]
+    }
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
